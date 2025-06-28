@@ -51,5 +51,9 @@ def initialize_database():
         price REAL,
         status TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS admins (
+        user_id INTEGER PRIMARY KEY
+    );
     """)
     conn.commit()
