@@ -18,6 +18,7 @@ from config import API_TOKEN
 from db import conn, cur, initialize_database
 
 # Routers
+from adminbutton import router as admin_button_router
 from user_routes import router as user_router
 from admin import admin_router
 from order import router as order_router
@@ -54,6 +55,7 @@ def register_routers(dp: Dispatcher):
     dp.include_router(wallet_router)
     dp.include_router(group_router)
     dp.include_router(contact_router)
+    dp.include_router(admin_button_router)
    # dp.include_router(admin_router)
     # dp.include_router(cancel_router)  # Uncomment if you moved cancel logic to a router
 
