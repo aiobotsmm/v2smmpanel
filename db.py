@@ -1,0 +1,55 @@
+import os
+import sqlite3
+from dotenv import load_dotenv
+from aiogram import Bot, Dispatcher
+from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
+from aiogram.fsm.storage.memory import MemoryStorage
+
+# --- Load Environment Variables ---
+load_dotenv()
+API_TOKEN = os.getenv("API_TOKEN")
+
+# --- Setup Bot ---
+bot = Bot(
+    token=API_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+)
+
+# --- Dispatcher with in-memory FSM storage ---
+dp = Dispatcher(storage=MemoryStorage())
+
+# --- SQLite Database Connection ---
+conn = sqlite3.connect("db.sqlite3", check_same_thread=False)
+cur = conn.cursor()
+
+# --- Initialize Required Tables ---
+def initialize_database():
+    cur.executescript("""
+    CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY,
+        name TEXT,
+        phone TEXT,
+        balance REAL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        amount REAL,
+        txn_id TEXT UNIQUE,
+        status TEXT DEFAULT 'pending'
+    );
+
+    CREATE TABLE IF NOT EXISTS orders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        order_id TEXT,
+        service_name TEXT,
+        link TEXT,
+        quantity INTEGER,
+        price REAL,
+        status TEXT
+    );
+    """)
+    conn.commit()
