@@ -9,7 +9,7 @@ from aiogram.types import (
 from aiogram.fsm.context import FSMContext
 from states import AddBalance
 from keyboards import upi_keyboard, main_menu
-from config import UPI_ID, ADMIN_ID
+from config import UPI_ID, ADMIN_IDS
 from db import bot, cur, conn
 
 router = Router()
