@@ -24,7 +24,7 @@ from order import router as order_router
 from my_orders import router as my_orders_router
 from wallet_balance import router as wallet_router
 from auto_order_updater import auto_update_orders
-from groupdata import router as group_router
+from groupdata import group_router
 from admin_contact import contact_router
 # from cancel import cancel_router  # Optional if you separate cancel handler
 
