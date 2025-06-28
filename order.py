@@ -203,7 +203,7 @@ async def place_final_order(callback: CallbackQuery, state: FSMContext):
             f"💰 ₹{cost:.2f}\n"
             f"⏳ Status: pending"
         )
-        await bot.send_message(ADMIN_IDS, notif_msg, parse_mode="Markdown")
+       # await bot.send_message(ADMIN_IDS, notif_msg, parse_mode="Markdown")
         await bot.send_message(GROUP_ID, notif_msg, parse_mode="Markdown")
 
     except Exception as e:
