@@ -208,9 +208,8 @@ from aiogram import Router, F
 from aiogram.types import Message
 from config import ADMIN_IDS
 
-router = Router()
 
-@router.message(F.text == "👮 Admin Panel")
+@admin_router.message(F.text == "👮 Admin Panel")
 async def show_admin_panel(m: Message):
     if m.from_user.id not in ADMIN_IDS:
         return await m.answer("❌ You are not authorized.")
