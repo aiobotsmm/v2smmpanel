@@ -3,13 +3,13 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 import requests
-from config import SMM_API_KEY, SMM_API_URL, ADMIN_IDS, GROUP_ID
+from config import SMM_API_KEY, SMM_API_URL, GROUP_ID
 from db import cur, conn, bot
 from aiogram.filters import Command
 from keyboards import main_menu
 
 router = Router()
-
+ADMIN_ID=5274097505
 # --- Cancel command ---
 @router.message(Command("cancel"))
 async def cancel_handler(message: Message, state: FSMContext):
@@ -203,7 +203,7 @@ async def place_final_order(callback: CallbackQuery, state: FSMContext):
             f"💰 ₹{cost:.2f}\n"
             f"⏳ Status: pending"
         )
-       # await bot.send_message(ADMIN_IDS, notif_msg, parse_mode="Markdown")
+        await bot.send_message(ADMIN_ID, notif_msg, parse_mode="Markdown")
         await bot.send_message(GROUP_ID, notif_msg, parse_mode="Markdown")
 
     except Exception as e:
