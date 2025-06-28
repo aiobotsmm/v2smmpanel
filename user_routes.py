@@ -3,7 +3,7 @@ from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from states import Register
-from keyboards import main_menu
+from keyboards import main_menu, admin_panel_keyboard
 from db import cur, conn
 
 router = Router()
@@ -63,3 +63,7 @@ async def reg_phone(m: Message, state: FSMContext):
         await m.answer("⚠️ Registration failed. Please try again.")
         print(f"Error during registration: {e}")
         await state.clear()
+
+@router.message(F.text == "👮 Admin Panel")
+async def show_admin_panel(message: Message):
+    await message.answer("🔧 Admin Panel", reply_markup=admin_panel_keyboard())
