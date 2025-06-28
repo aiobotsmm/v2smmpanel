@@ -202,17 +202,4 @@ async def refund_by_order(m: Message):
     except Exception as e:
         await m.answer(f"❌ Failed: {e}")
 
-#admin button
-from keyboards import admin_panel_keyboard
-from aiogram import Router, F
-from aiogram.types import Message
-from config import ADMIN_IDS
-
-
-@admin_router.message(F.text == "👮 Admin Panel")
-async def show_admin_panel(m: Message):
-    if m.from_user.id not in ADMIN_IDS:
-        return await m.answer("❌ You are not authorized.")
-    
-    await m.answer("👮 Welcome to the Admin Panel.\nChoose an action:", reply_markup=admin_panel_keyboard())
 
