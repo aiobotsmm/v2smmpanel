@@ -19,7 +19,7 @@ from admin import admin_router
 from order import router as order_router
 from my_orders import router as my_orders_router
 from wallet_balance import router as wallet_router
-from orderupdate import router as order_update_router
+from auto_order_updater import auto_update_orders
 from groupdata import router as group_router
 from admin_contact import contact_router
 # from cancel import cancel_router  # Optional: if needed
@@ -50,13 +50,14 @@ def register_routers(dp: Dispatcher):
     dp.include_router(order_router)
     dp.include_router(my_orders_router)
     dp.include_router(wallet_router)
-    dp.include_router(order_update_router)
+    #dp.include_router(order_update_router)
     dp.include_router(group_router)
     dp.include_router(contact_router)
     # dp.include_router(cancel_router)  # Uncomment if implemented
 
 # Main async function
 async def main():
+    asyncio.create_task(auto_update_orders())  # 🔁 Start background updater
     logging.basicConfig(level=logging.INFO)
     logging.info("✅ Initializing bot...")
 
