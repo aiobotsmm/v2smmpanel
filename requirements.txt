@@ -1,0 +1,7 @@
+aiogram
+fastapi
+uvicorn
+requests
+pillow
+qrcode==7.4.2
+python-dotenv
