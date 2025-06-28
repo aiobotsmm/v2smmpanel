@@ -1,12 +1,13 @@
+
 import sqlite3
 import io
 import qrcode
 from aiogram import Router, F
 from aiogram.types import (
-    Message, CallbackQuery,
-    InlineKeyboardMarkup, InlineKeyboardButton, BufferedInputFile
+    Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, BufferedInputFile
 )
 from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
 from states import AddBalance
 from keyboards import upi_keyboard, main_menu
 from config import UPI_ID, ADMIN_IDS
