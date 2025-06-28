@@ -18,3 +18,9 @@ class PlaceOrder(StatesGroup):
     svc_rate = State()
     svc_link = State()
     svc_qty = State()
+
+from aiogram.fsm.state import State, StatesGroup
+
+class AdminAction(StatesGroup):
+    adding_admin = State()
+    removing_admin = State()
