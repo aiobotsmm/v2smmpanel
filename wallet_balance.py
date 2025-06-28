@@ -114,8 +114,9 @@ async def save_txnid(m: Message, state: FSMContext):
     ])
 
     await m.answer("✅ Submitted for approval. You’ll be notified once processed.")
+    for admin_id in ADMIN_IDS:
     await bot.send_message(
-        ADMIN_IDS,
+        admin_id,
         f"🧾 *New Payment Request*\n"
         f"👤 User ID: `{m.from_user.id}`\n"
         f"💸 Amount: ₹{amount}\n"
