@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 import requests
-from config import SMM_API_KEY, SMM_API_URL, ADMIN_ID, GROUP_ID
+from config import SMM_API_KEY, SMM_API_URL, ADMIN_IDS, GROUP_ID
 from db import cur, conn, bot
 from aiogram.filters import Command
 from keyboards import main_menu
