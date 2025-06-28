@@ -17,7 +17,7 @@ async def cmd_start(m: Message, state: FSMContext):
             balance = row[0] or 0
             await m.answer(
                 f"👋 Welcome back!\n💰 Balance: ₹{balance:.2f}",
-                reply_markup=main_menu(balance)
+                reply_markup=main_menu(m.from_user.id)  # ✅ correct
             )
             await state.clear()
         else:
