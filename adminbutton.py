@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from keyboards import admin_panel_keyboard
-from utils.admin_utils import is_admin  # import your is_admin() helper
+from admin_utils import is_admin  # import your is_admin() helper
 
 router = Router()
 
