@@ -26,7 +26,7 @@ from wallet_balance import router as wallet_router
 from auto_order_updater import auto_update_orders
 from groupdata import group_router
 from admin_contact import contact_router
-from admin import router as admin_router
+#from admin import router as admin_router
 # from cancel import cancel_router  # Optional if you separate cancel handler
 
 # FastAPI for health check (Optional but useful for Azure/uptime monitors)
@@ -54,7 +54,7 @@ def register_routers(dp: Dispatcher):
     dp.include_router(wallet_router)
     dp.include_router(group_router)
     dp.include_router(contact_router)
-    dp.include_router(admin_router)
+   # dp.include_router(admin_router)
     # dp.include_router(cancel_router)  # Uncomment if you moved cancel logic to a router
 
 # Main function
