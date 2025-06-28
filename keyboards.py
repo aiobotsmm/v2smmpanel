@@ -3,7 +3,7 @@ from aiogram.types import (
     InlineKeyboardMarkup, InlineKeyboardButton
 )
 from config import ADMIN_IDS
-
+from admin_utils import is_admin
 # ✅ Helper: check if user is admin
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
