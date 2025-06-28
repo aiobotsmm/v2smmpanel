@@ -16,7 +16,7 @@ async def cancel_handler(message: Message, state: FSMContext):
     if await state.get_state() is None:
         return await message.answer("⚠️ Nothing to cancel.")
     await state.clear()
-    await message.answer("❌ Operation cancelled.", reply_markup=main_menu())
+    await message.answer("❌ Operation cancelled.", reply_markup=main_menu(message.from_user.id))
 
 # --- FSM States ---
 class PlaceOrder(StatesGroup):
