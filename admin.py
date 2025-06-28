@@ -7,8 +7,10 @@ from keyboards import main_menu
 
 admin_router = Router()
 
-def is_admin(user_id):
-    return user_id in ADMIN_IDS
+def is_admin(user_id: int) -> bool:
+    result = cur.execute("SELECT 1 FROM admins WHERE user_id = ?", (user_id,)).fetchone()
+    return result is not None
+
 
 # --- Notify group helper ---
 async def notify_group_payment(user_id: int, amount: float, reason: str = "Balance Update"):
@@ -201,5 +203,45 @@ async def refund_by_order(m: Message):
         await m.answer("✅ Refund processed.")
     except Exception as e:
         await m.answer(f"❌ Failed: {e}")
+
+#add admin 
+from aiogram.filters import Command
+from aiogram.types import Message
+
+# --- /addadmin ---
+@admin_router.message(Command("addadmin"))
+async def add_admin(m: Message):
+    if not is_admin(m.from_user.id):
+        return await m.answer("❌ Unauthorized.")
+    
+    parts = m.text.split()
+    if len(parts) != 2:
+        return await m.answer("Usage: /addadmin <user_id>")
+    
+    try:
+        uid = int(parts[1])
+        cur.execute("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (uid,))
+        conn.commit()
+        await m.answer(f"✅ User `{uid}` has been granted admin access.", parse_mode="Markdown")
+    except Exception as e:
+        await m.answer(f"❌ Error: {e}")
+
+# --- /removeadmin ---
+@admin_router.message(Command("removeadmin"))
+async def remove_admin(m: Message):
+    if not is_admin(m.from_user.id):
+        return await m.answer("❌ Unauthorized.")
+
+    parts = m.text.split()
+    if len(parts) != 2:
+        return await m.answer("Usage: /removeadmin <user_id>")
+    
+    try:
+        uid = int(parts[1])
+        cur.execute("DELETE FROM admins WHERE user_id = ?", (uid,))
+        conn.commit()
+        await m.answer(f"✅ User `{uid}` has been removed from admin list.", parse_mode="Markdown")
+    except Exception as e:
+        await m.answer(f"❌ Error: {e}")
 
 
