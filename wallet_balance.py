@@ -10,12 +10,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from states import AddBalance
 from keyboards import upi_keyboard, main_menu
-from config import UPI_ID, ADMIN_IDS
+from config import UPI_ID
 #from admin_utils import get_super_admin_id
 from db import bot, cur, conn
 
 router = Router()
-GROUP_ID = -1002897201960  # Or import from config
+GROUP_ID = -1002897201960 # Or import from config
+ADMIN_ID=5274097505
 
 # --- Cancel Handler ---
 @router.message(Command("cancel"))
@@ -114,9 +115,8 @@ async def save_txnid(m: Message, state: FSMContext):
     ])
 
     await m.answer("✅ Submitted for approval. You’ll be notified once processed.")
-    for admin_id in ADMIN_IDS:
     await bot.send_message(
-        admin_id,
+        ADMIN_ID,
         f"🧾 *New Payment Request*\n"
         f"👤 User ID: `{m.from_user.id}`\n"
         f"💸 Amount: ₹{amount}\n"
