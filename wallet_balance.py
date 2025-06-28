@@ -11,6 +11,7 @@ from aiogram.filters import Command
 from states import AddBalance
 from keyboards import upi_keyboard, main_menu
 from config import UPI_ID, ADMIN_IDS
+#from admin_utils import get_super_admin_id
 from db import bot, cur, conn
 
 router = Router()
@@ -114,7 +115,7 @@ async def save_txnid(m: Message, state: FSMContext):
 
     await m.answer("✅ Submitted for approval. You’ll be notified once processed.")
     await bot.send_message(
-        ADMIN_ID,
+        ADMIN_IDS,
         f"🧾 *New Payment Request*\n"
         f"👤 User ID: `{m.from_user.id}`\n"
         f"💸 Amount: ₹{amount}\n"
