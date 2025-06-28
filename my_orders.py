@@ -27,6 +27,8 @@ async def view_orders(message: Message):
             )
 
         msg = "📦 *Your Orders:*\n\n" + "\n\n".join(orders)
+        msg += "\n\n❗ *You can cancel any ongoing operation anytime by typing* `/cancel`."
+
         await message.answer(msg, parse_mode="Markdown")
 
     except Exception as e:
