@@ -4,12 +4,12 @@ from aiogram.types import Message
 from db import cur, conn, bot
 from config import ADMIN_IDS, GROUP_ID
 from keyboards import main_menu
-
+from admin_utils import is_admin
 admin_router = Router()
 
-def is_admin(user_id: int) -> bool:
+"""def is_admin(user_id: int) -> bool:
     result = cur.execute("SELECT 1 FROM admins WHERE user_id = ?", (user_id,)).fetchone()
-    return result is not None
+    return result is not None"""
 
 
 # --- Notify group helper ---
