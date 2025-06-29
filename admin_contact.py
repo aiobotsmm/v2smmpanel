@@ -9,4 +9,4 @@ contact_router = Router()
 
 @contact_router.message(F.text == "📞 Contact Admin")
 async def contact_admin(m: Message):
-    await m.answer(f"📩 Contact support: @{SUPPORT_USERNAME}", parse_mode=None)
+    await m.answer(f"📩 Contact support: {SUPPORT_USERNAME}", parse_mode=None)
