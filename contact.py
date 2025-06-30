@@ -21,7 +21,8 @@ dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 
 # === USER → GROUP ===
-@router.message(F.text & ~F.from_user.id.in_(ADMIN_IDS))
+#@router.message(F.text & ~F.from_user.id.in_(ADMIN_IDS))
+@router.message(F.chat.type.in_(["private"]))
 async def handle_user_msg(message: Message):
     user = message.from_user
     msg = (
