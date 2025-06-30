@@ -6,7 +6,6 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.router import Router
 from dotenv import load_dotenv
 
 # === Load Bot Token and Admins ===
