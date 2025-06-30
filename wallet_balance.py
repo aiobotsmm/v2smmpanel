@@ -121,6 +121,10 @@ async def save_txnid(m: Message, state: FSMContext):
     except sqlite3.IntegrityError:
         return await m.answer("❗ This transaction ID is already used.")
 
+    # ✅ Send Email Notification to Admin
+    username = m.from_user.username or m.from_user.first_name
+    send_email_alert(username, txn_id, amount)
+
     approve_btn = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Approve", callback_data=f"ap_{m.from_user.id}_{amount}_{txn_id}")],
         [InlineKeyboardButton(text="❌ Decline", callback_data=f"de_{m.from_user.id}_{amount}_{txn_id}")]
@@ -135,20 +139,7 @@ async def save_txnid(m: Message, state: FSMContext):
         f"🧾 Txn ID: `{txn_id}`",
         reply_markup=approve_btn,
         parse_mode="Markdown"
-    )
-    
-@router.message(FundRequest.enter_txn)
-async def get_txn_and_notify(message: Message, state: FSMContext):
-    data = await state.get_data()
-    amount = data["amount"]
-    txn_id = message.text
-    username = message.from_user.username or message.from_user.first_name
-
-    # Send email alert to admin
-    send_email_alert(username, txn_id, amount)
-
-    await message.reply("✅ Your request has been sent to admin for review.")
-    
+    )   
     await state.clear()
 
 # --- Approve Payment ---
