@@ -311,3 +311,4 @@ async def broadcast_to_all(message: Message, bot):
             fail += 1
 
     await message.reply(f"✅ Broadcast sent to {success} users\n❌ Failed: {fail}")
+'''
