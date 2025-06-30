@@ -296,7 +296,7 @@ async def broadcast_to_all(message: Message, bot):
     msg = parts[1]
     kb = extract_link_button(msg)
 
-    cur.execute("SELECT id FROM users")
+    cur.execute("SELECT user_id FROM users")  # ✅ Fixed
     user_ids = cur.fetchall()
 
     success, fail = 0, 0
