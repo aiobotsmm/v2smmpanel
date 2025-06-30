@@ -244,7 +244,7 @@ async def remove_admin(m: Message):
     except Exception as e:
         await m.answer(f"❌ Error: {e}")
 
-'''
+
 #bot send msgs
 from aiogram import Router
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
@@ -252,9 +252,6 @@ from aiogram.filters import Command
 import sqlite3
 import re
 
-
-conn = sqlite3.connect("your_database.db")
-cur = conn.cursor()
 
 # 🔹 Extract first link from message and turn into a button
 def extract_link_button(text: str):
@@ -311,4 +308,3 @@ async def broadcast_to_all(message: Message, bot):
             fail += 1
 
     await message.reply(f"✅ Broadcast sent to {success} users\n❌ Failed: {fail}")
-'''
