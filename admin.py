@@ -244,7 +244,7 @@ async def remove_admin(m: Message):
     except Exception as e:
         await m.answer(f"❌ Error: {e}")
 
-
+'''
 #bot send msgs
 from aiogram import Router
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
