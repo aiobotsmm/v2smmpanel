@@ -30,9 +30,9 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 
-dp = Dispatcher(storage=MemoryStorage())
+
 router = Router()
-dp.include_router(router)
+
 
 # === User sends message (forward to admins from DB) ===
 @router.message(F.text)
