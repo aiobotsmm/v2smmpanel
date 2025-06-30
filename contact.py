@@ -44,18 +44,19 @@ async def handle_admin_reply(message: Message):
 
     print("DEBUG >>> Original replied message:\n", original_text)
 
-    # Try to extract user ID from original message
-    match = re.search(r"ID[:：]?\s*<code>(\d+)</code>", original_text)
+    # Updated regex to match ID without <code> tags
+    match = re.search(r"ID[:：]?\s*(\d+)", original_text)
     if not match:
-        await message.answer("❌ User ID not found in the original message.\nMake sure you replied directly to the bot’s message.")
-        return
+        return await message.reply("❌ User ID not found in the original message.\nMake sure you replied to the correct bot message.")
 
     user_id = int(match.group(1))
+
     try:
-        await bot.send_message(user_id, f"🛠️ Admin:\n\n{message.html_text}")
+        await bot.send_message(chat_id=user_id, text=f"🛠️ Admin:\n\n{message.html_text}")
         await message.reply("✅ Message sent to user.")
     except Exception as e:
         await message.reply(f"❌ Failed to send message: {e}")
+
 
 
 # === MAIN ===
