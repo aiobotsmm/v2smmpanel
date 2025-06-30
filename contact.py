@@ -1,80 +1,62 @@
-import asyncio
 import re
-import sqlite3
+import os
+import asyncio
 from aiogram import Bot, Dispatcher, F, Router
-from aiogram.enums.parse_mode import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
+from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
+from aiogram.fsm.storage.memory import MemoryStorage
+from dotenv import load_dotenv
+from db import get_admin_ids, init as init_db  # ✅ Use your db.py
 
-# === DB Setup ===
-DB_PATH = "db.py"  # Update path if needed
+# === Load Contact Bot Token ===
+load_dotenv()
+CONTACT_BOT_TOKEN = os.getenv("CONTACT_BOT_TOKEN")  # Add this in your .env file
 
-def get_admin_ids():
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        cur.execute("SELECT user_id FROM admins")  # Or use 'id' if that's your column
-        admin_ids = [row[0] for row in cur.fetchall()]
-        conn.close()
-        return admin_ids
-    except Exception as e:
-        print(f"DB error: {e}")
-        return []
+# === Initialize DB (admins table etc.) ===
+init_db()
 
-# === Bot Setup ===
-CONTACT_BOT_TOKEN = "8178918373:AAGoV0MpOp-TaMbnS4YhyFJvK8yhOB44TQk"
-from aiogram.client.default import DefaultBotProperties  # ✅ Add this import
-
+# === Bot + Dispatcher ===
 bot = Bot(
     token=CONTACT_BOT_TOKEN,
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
-
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
-dp.include_router(router)
 
-# === User sends message (forward to admins from DB) ===
-@router.message(F.text)
-async def handle_user_message(message: Message):
+# === Handle user messages ===
+@router.message(F.text & ~F.from_user.id.in_(get_admin_ids()))
+async def forward_user_msg(message: Message):
     user = message.from_user
-    admin_ids = get_admin_ids()
-
-    # If message is from admin, allow replies only
-    if user.id in admin_ids and message.reply_to_message:
-        return await handle_admin_reply(message)
-
-    if user.id in admin_ids:
-        return  # Ignore new messages from admins that are not replies
-
     user_info = f"📩 Message from @{user.username or user.first_name}\n🆔 ID: <code>{user.id}</code>"
-    full_msg = f"{user_info}\n\n{message.text}"
+    full_msg = f"{user_info}\n\n{message.html_text}"
 
-    for admin_id in admin_ids:
+    for admin_id in get_admin_ids():
         try:
-            await bot.send_message(chat_id=admin_id, text=full_msg)
+            await bot.send_message(admin_id, full_msg)
         except Exception as e:
-            print(f"❌ Failed to forward to admin {admin_id}: {e}")
+            print(f"Failed to send message to admin {admin_id}: {e}")
 
     await message.answer("✅ Your message has been sent to the support team.")
 
-# === Admin replies (send to user) ===
+# === Handle admin replies ===
+@router.message(F.reply_to_message & F.from_user.id.in_(get_admin_ids()))
 async def handle_admin_reply(message: Message):
     original = message.reply_to_message.text
     match = re.search(r"ID:\s?<code>(\d+)</code>", original)
-
     if not match:
         return await message.answer("❌ User ID not found in original message.")
 
     user_id = int(match.group(1))
     try:
-        await bot.send_message(chat_id=user_id, text=f"🛠️ Support: {message.text}")
+        await bot.send_message(user_id, f"🛠️ Support: {message.html_text}")
         await message.answer("✅ Reply sent to user.")
     except Exception as e:
         await message.answer(f"❌ Failed to send message: {e}")
 
-# === Start Bot ===
+# === Run contact bot ===
 async def main():
+    dp.include_router(router)
     print("📞 Contact bot is running...")
     await dp.start_polling(bot)
 
