@@ -57,3 +57,12 @@ def initialize_database():
     );
     """)
     conn.commit()
+
+def get_admin_ids():
+    try:
+        cur.execute("SELECT user_id FROM admins")
+        return [row[0] for row in cur.fetchall()]
+    except Exception as e:
+        print(f"DB error in get_admin_ids(): {e}")
+        return []
+
