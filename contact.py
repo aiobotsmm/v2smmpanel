@@ -1,43 +1,62 @@
 import asyncio
 import re
-import os
-from aiogram import Router
-from aiogram import Bot, Dispatcher, F
-from aiogram.types import Message
+import sqlite3
+from aiogram import Bot, Dispatcher, F, Router
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
-from dotenv import load_dotenv
+from aiogram.types import Message
 
-# === Load Bot Token and Admins ===
-load_dotenv()
-CONTACT_BOT_TOKEN = os.getenv("CONTACT_BOT_TOKEN")  # Add this in your .env file
-ADMINS = [123456789, 987654321]  # Replace with actual admin Telegram IDs
+# === DB Setup ===
+DB_PATH = "db.py"  # Update path if needed
 
-# === Bot and Dispatcher Setup ===
+def get_admin_ids():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT user_id FROM admins")  # Or use 'id' if that's your column
+        admin_ids = [row[0] for row in cur.fetchall()]
+        conn.close()
+        return admin_ids
+    except Exception as e:
+        print(f"DB error: {e}")
+        return []
+
+# === Bot Setup ===
+CONTACT_BOT_TOKEN = "8178918373:AAGoV0MpOp-TaMbnS4YhyFJvK8yhOB44TQk"
 bot = Bot(token=CONTACT_BOT_TOKEN, parse_mode=ParseMode.HTML)
+dp = Dispatcher(storage=MemoryStorage())
 router = Router()
+dp.include_router(router)
 
-# === Handle user message (forward to admins) ===
-@router.message(F.text & ~F.from_user.id.in_(ADMINS))
+# === User sends message (forward to admins from DB) ===
+@router.message(F.text)
 async def handle_user_message(message: Message):
     user = message.from_user
+    admin_ids = get_admin_ids()
+
+    # If message is from admin, allow replies only
+    if user.id in admin_ids and message.reply_to_message:
+        return await handle_admin_reply(message)
+
+    if user.id in admin_ids:
+        return  # Ignore new messages from admins that are not replies
+
     user_info = f"📩 Message from @{user.username or user.first_name}\n🆔 ID: <code>{user.id}</code>"
     full_msg = f"{user_info}\n\n{message.text}"
 
-    # Forward to all admins
-    for admin_id in ADMINS:
+    for admin_id in admin_ids:
         try:
             await bot.send_message(chat_id=admin_id, text=full_msg)
         except Exception as e:
-            print(f"Error sending to admin {admin_id}: {e}")
+            print(f"❌ Failed to forward to admin {admin_id}: {e}")
 
     await message.answer("✅ Your message has been sent to the support team.")
 
-# === Admin replies (goes back to user) ===
-@router.message(F.reply_to_message & F.from_user.id.in_(ADMINS))
+# === Admin replies (send to user) ===
 async def handle_admin_reply(message: Message):
     original = message.reply_to_message.text
     match = re.search(r"ID:\s?<code>(\d+)</code>", original)
+
     if not match:
         return await message.answer("❌ User ID not found in original message.")
 
