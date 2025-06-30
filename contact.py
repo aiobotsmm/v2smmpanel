@@ -44,7 +44,8 @@ async def forward_user_msg(message: Message):
 @router.message(F.reply_to_message & F.from_user.id.in_(get_admin_ids()))
 async def handle_admin_reply(message: Message):
     original = message.reply_to_message.text
-    match = re.search(r"ID:\s?<code>(\d+)</code>", original)
+    match = re.search(r"ID:<code>(\d+)</code>", original)
+
     if not match:
         return await message.answer("❌ User ID not found in original message.")
 
