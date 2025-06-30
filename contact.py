@@ -7,14 +7,14 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
-from db import get_admin_ids, init as init_db  # ✅ Use your db.py
+from db import get_admin_ids, initialize_databaseas 
 
 # === Load Contact Bot Token ===
 load_dotenv()
 CONTACT_BOT_TOKEN = os.getenv("CONTACT_BOT_TOKEN")  # Add this in your .env file
 
 # === Initialize DB (admins table etc.) ===
-init_db()
+initialize_database()
 
 # === Bot + Dispatcher ===
 bot = Bot(
