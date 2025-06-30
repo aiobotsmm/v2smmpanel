@@ -23,7 +23,13 @@ def get_admin_ids():
 
 # === Bot Setup ===
 CONTACT_BOT_TOKEN = "8178918373:AAGoV0MpOp-TaMbnS4YhyFJvK8yhOB44TQk"
-bot = Bot(token=CONTACT_BOT_TOKEN, parse_mode=ParseMode.HTML)
+from aiogram.client.default import DefaultBotProperties  # ✅ Add this import
+
+bot = Bot(
+    token=CONTACT_BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
+
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 dp.include_router(router)
