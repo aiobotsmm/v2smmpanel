@@ -7,7 +7,7 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
-from db import get_admin_ids, initialize_databaseas 
+from db import get_admin_ids, initialize_database
 
 # === Load Contact Bot Token ===
 load_dotenv()
