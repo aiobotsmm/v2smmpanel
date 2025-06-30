@@ -246,66 +246,59 @@ async def remove_admin(m: Message):
 
 
 #bot send msgs
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 import sqlite3
-import os
 import re
+from utils import is_admin  # If is_admin is in a separate utils.py
 
 
-ADMIN_IDS = int(os.getenv("ADMIN_IDS"))
 conn = sqlite3.connect("your_database.db")
 cur = conn.cursor()
 
-# 📦 Helper: Create button from URL
+# 🔹 Extract first link from message and turn into a button
 def extract_link_button(text: str):
     match = re.search(r"(https?://[^\s]+)", text)
     if match:
         url = match.group(1)
-        kb = InlineKeyboardMarkup(inline_keyboard=[
+        return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🌐 Open Link", url=url)]
         ])
-        return kb
     return None
 
-# 🔹 /sendmsg <user_id> <message>
-@router.message(Command("sendmsg"))
+# --- /sendmsg <user_id> <message> ---
+@admin_router.message(Command("sendmsg"))
 async def send_single_user_message(message: Message, bot):
-    if message.from_user.id != ADMIN_IDS:
-        return await message.reply("❌ You're not authorized.")
+    if not is_admin(message.from_user.id):
+        return await message.reply("❌ Unauthorized.")
 
     parts = message.text.strip().split(maxsplit=2)
     if len(parts) < 3:
-        return await message.reply("❗ Usage: /sendmsg <user_id> <message>")
+        return await message.reply("Usage: /sendmsg <user_id> <message>")
 
     try:
         user_id = int(parts[1])
         text = parts[2]
-        reply_markup = extract_link_button(text)
+        kb = extract_link_button(text)
 
-        await bot.send_message(
-            chat_id=user_id,
-            text=text,
-            parse_mode="HTML",
-            reply_markup=reply_markup
-        )
+        await bot.send_message(chat_id=user_id, text=text, parse_mode="HTML", reply_markup=kb)
         await message.reply(f"✅ Sent to user `{user_id}`", parse_mode="Markdown")
     except Exception as e:
-        await message.reply(f"❌ Failed to send: {e}")
+        await message.reply(f"❌ Error: {e}")
 
-# 🔹 /broadcast <message>
-@router.message(Command("broadcast"))
+# --- /broadcast <message> ---
+@admin_router.message(Command("broadcast"))
 async def broadcast_to_all(message: Message, bot):
-    if message.from_user.id != ADMIN_IDS:
-        return await message.reply("❌ You're not authorized.")
+    if not is_admin(message.from_user.id):
+        return await message.reply("❌ Unauthorized.")
 
     parts = message.text.strip().split(maxsplit=1)
     if len(parts) < 2:
-        return await message.reply("❗ Usage: /broadcast <message>")
+        return await message.reply("Usage: /broadcast <message>")
 
-    broadcast_msg = parts[1]
-    reply_markup = extract_link_button(broadcast_msg)
+    msg = parts[1]
+    kb = extract_link_button(msg)
 
     cur.execute("SELECT id FROM users")
     user_ids = cur.fetchall()
@@ -313,14 +306,9 @@ async def broadcast_to_all(message: Message, bot):
     success, fail = 0, 0
     for (uid,) in user_ids:
         try:
-            await bot.send_message(
-                chat_id=uid,
-                text=broadcast_msg,
-                parse_mode="HTML",
-                reply_markup=reply_markup
-            )
+            await bot.send_message(chat_id=uid, text=msg, parse_mode="HTML", reply_markup=kb)
             success += 1
         except:
             fail += 1
 
-    await message.reply(f"✅ Sent to {success} users.\n❌ Failed: {fail}")
+    await message.reply(f"✅ Broadcast sent to {success} users\n❌ Failed: {fail}")
