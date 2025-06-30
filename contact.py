@@ -40,17 +40,19 @@ async def handle_user_msg(message: Message):
 @router.message(F.reply_to_message & F.chat.id == SUPPORT_GROUP_ID)
 async def handle_admin_reply(message: Message):
     original = message.reply_to_message
+    original_text = original.text or ""
 
-    # Look for user ID in the original message
-    match = re.search(r"ID[:：]?\s*<code>(\d+)</code>", original.text or "")
+    print("DEBUG >>> Original replied message:\n", original_text)
+
+    # Try to extract user ID from original message
+    match = re.search(r"ID[:：]?\s*<code>(\d+)</code>", original_text)
     if not match:
-        await message.answer("❌ User ID not found in the original message.\nMake sure you replied to the correct bot message.")
+        await message.answer("❌ User ID not found in the original message.\nMake sure you replied directly to the bot’s message.")
         return
 
     user_id = int(match.group(1))
-
     try:
-        await bot.send_message(chat_id=user_id, text=f"🛠️ Admin: {message.html_text}")
+        await bot.send_message(user_id, f"🛠️ Admin:\n\n{message.html_text}")
         await message.reply("✅ Message sent to user.")
     except Exception as e:
         await message.reply(f"❌ Failed to send message: {e}")
