@@ -251,7 +251,6 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 import sqlite3
 import re
-from utils import is_admin  # If is_admin is in a separate utils.py
 
 
 conn = sqlite3.connect("your_database.db")
