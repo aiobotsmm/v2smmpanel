@@ -28,8 +28,9 @@ router = Router()
 @router.message(F.text & ~F.from_user.id.in_(get_admin_ids()))
 async def forward_user_msg(message: Message):
     user = message.from_user
-    user_info = f"📩 Message from @{user.username or user.first_name}\n🆔 ID: <code>{user.id}</code>"
+    user_info = f"📩 From: @{user.username or user.full_name}\nID:<code>{user.id}</code>"
     full_msg = f"{user_info}\n\n{message.html_text}"
+
 
     for admin_id in get_admin_ids():
         try:
