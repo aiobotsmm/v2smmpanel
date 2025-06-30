@@ -14,6 +14,18 @@ from config import UPI_ID
 #from admin_utils import get_super_admin_id
 from db import bot, cur, conn
 
+#email
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
+from email_alert import send_email_alert
+# Define FSM for fund request
+class FundRequest(StatesGroup):
+    enter_amount = State()
+    enter_txn = State()
+
+
+
+
 router = Router()
 GROUP_ID = -1002897201960 # Or import from config
 ADMIN_ID=5274097505
@@ -116,7 +128,7 @@ async def save_txnid(m: Message, state: FSMContext):
 
     await m.answer("✅ Submitted for approval. You’ll be notified once processed.")
     await bot.send_message(
-        ADMIN_ID,
+        GROUP_ID,
         f"🧾 *New Payment Request*\n"
         f"👤 User ID: `{m.from_user.id}`\n"
         f"💸 Amount: ₹{amount}\n"
@@ -124,6 +136,19 @@ async def save_txnid(m: Message, state: FSMContext):
         reply_markup=approve_btn,
         parse_mode="Markdown"
     )
+    
+@router.message(FundRequest.enter_txn)
+async def get_txn_and_notify(message: Message, state: FSMContext):
+    data = await state.get_data()
+    amount = data["amount"]
+    txn_id = message.text
+    username = message.from_user.username or message.from_user.first_name
+
+    # Send email alert to admin
+    send_email_alert(username, txn_id, amount)
+
+    await message.reply("✅ Your request has been sent to admin for review.")
+    
     await state.clear()
 
 # --- Approve Payment ---
