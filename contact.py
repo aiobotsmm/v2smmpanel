@@ -30,9 +30,9 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)
 )
 
-
+dp = Dispatcher(storage=MemoryStorage())
 router = Router()
-
+dp.include_router(router)
 
 # === User sends message (forward to admins from DB) ===
 @router.message(F.text)
@@ -72,3 +72,11 @@ async def handle_admin_reply(message: Message):
         await message.answer("✅ Reply sent to user.")
     except Exception as e:
         await message.answer(f"❌ Failed to send message: {e}")
+
+# === Start Bot ===
+async def main():
+    print("📞 Contact bot is running...")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
