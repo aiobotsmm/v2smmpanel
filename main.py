@@ -128,6 +128,8 @@ def register_routers(dp: Dispatcher):
 async def main():
     # Start auto order updater loop
     asyncio.create_task(auto_update_orders())
+    asyncio.create_task(auto_generate_tokens())
+
 
     # Initialize DB and logging
     initialize_database()
