@@ -58,6 +58,18 @@ def initialize_database():
         user_id INTEGER PRIMARY KEY
     );
 
+    CREATE TABLE IF NOT EXISTS temp_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT,
+    user_id INTEGER,
+    service_name TEXT,
+    link TEXT,
+    quantity INTEGER,
+    price REAL,
+    created_at TIMESTAMP
+
+    );
+
      CREATE TABLE IF NOT EXISTS complaint_tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
