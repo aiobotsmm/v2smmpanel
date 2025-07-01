@@ -20,6 +20,8 @@ load_dotenv()
 BOT_TOKEN = "5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I"
 DATABASE = "yourdb.db"  # update this
 GROUP_ID = int(os.getenv("GROUP_ID"))
+API_KEY = os.getenv("SMM_API_KEY")
+API_URL = os.getenv("SMM_API_URL")
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
