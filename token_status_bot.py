@@ -57,7 +57,8 @@ async def verify_token(message: Message, state: FSMContext):
     # ✅ 1. Fetch wallet data from your DB/API using the token
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post("https://yourdomain/api/token_verify", data={"token": token}) as resp:
+        
+            async with session.post("https://your-api.com/check_token", data={"token": token}) as resp:
                 data = await resp.json()
     except Exception:
         return await message.answer("❌ Failed to fetch data. Please try again later.")
