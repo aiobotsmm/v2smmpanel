@@ -57,6 +57,16 @@ def initialize_database():
     CREATE TABLE IF NOT EXISTS admins (
         user_id INTEGER PRIMARY KEY
     );
+
+     CREATE TABLE IF NOT EXISTS complaint_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        txn_id TEXT UNIQUE,
+        amount REAL,
+        token TEXT UNIQUE,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
     """)
     conn.commit()
 
