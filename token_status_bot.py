@@ -84,7 +84,7 @@ async def start_order(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(OrderStates.browsing_services)
     await show_services(call.message, state, page=1)
 
-# === Show SMM Services with Pagination ===
+# === Show SMM Services with Pagination (Vertical List) ===
 async def show_services(message: types.Message, state: FSMContext, page: int):
     try:
         async with aiohttp.ClientSession() as session:
@@ -102,12 +102,10 @@ async def show_services(message: types.Message, state: FSMContext, page: int):
     end = start + per_page
     current_services = services[start:end]
 
-    kb = InlineKeyboardBuilder()
-    for svc in current_services:
-        kb.button(
-            text=f"{svc['name']} - ₹{svc['rate']}/1k",
-            callback_data=f"svc_{svc['service']}"
-        )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"{svc['name']}", callback_data=f"svcdesc_{svc['service']}")]
+        for svc in current_services
+    ])
 
     nav = []
     if page > 1:
@@ -115,20 +113,20 @@ async def show_services(message: types.Message, state: FSMContext, page: int):
     if end < total:
         nav.append(InlineKeyboardButton(text="➡️ Next", callback_data=f"page_{page+1}"))
     if nav:
-        kb.row(*nav)
+        kb.inline_keyboard.append(nav)
 
     await state.update_data(all_services=services, current_page=page)
-    await message.edit_text("📋 Select a service to order:", reply_markup=kb.as_markup())
+    await message.edit_text("📋 Select a service to view details:", reply_markup=kb)
 
-# === Pagination for Services ===
+# === Pagination ===
 @dp.callback_query(F.data.startswith("page_"))
 async def paginate_services(call: types.CallbackQuery, state: FSMContext):
     page = int(call.data.split("_")[1])
     await show_services(call.message, state, page)
 
-# === When a Service is Selected ===
-@dp.callback_query(F.data.startswith("svc_"))
-async def service_selected(call: types.CallbackQuery, state: FSMContext):
+# === Show Service Description Before Proceeding ===
+@dp.callback_query(F.data.startswith("svcdesc_"))
+async def show_service_description(call: types.CallbackQuery, state: FSMContext):
     service_id = int(call.data.split("_")[1])
     data = await state.get_data()
     all_services = data.get("all_services", [])
@@ -137,9 +135,34 @@ async def service_selected(call: types.CallbackQuery, state: FSMContext):
     if not service:
         return await call.message.answer("❌ Service not found.")
 
+    desc = (
+        f"🛎️ <b>{service['name']}</b>\n"
+        f"💰 Rate: ₹{service['rate']}/1k\n"
+        f"📦 Min: {service['min']} | Max: {service['max']}\n"
+        f"🚀 Speed: {service.get('speed', 'N/A')}\n"
+        f"📜 Type: {service.get('type', 'N/A')}\n"
+        f"📝 Description: {service.get('description', 'No description')}\n"
+    )
+
     await state.update_data(service=service)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➡️ Continue", callback_data=f"svc_{service_id}")],
+        [InlineKeyboardButton(text="🔙 Back", callback_data=f"page_{data.get('current_page', 1)}")]
+    ])
+    await call.message.edit_text(desc, reply_markup=kb)
+
+# === Select Service After Description ===
+@dp.callback_query(F.data.startswith("svc_"))
+async def service_selected(call: types.CallbackQuery, state: FSMContext):
+    service_id = int(call.data.split("_")[1])
+    data = await state.get_data()
+    service = data.get("service")
+    if not service or int(service['service']) != service_id:
+        return await call.message.answer("❌ Service info mismatch. Please try again.")
+
     await state.set_state(OrderStates.entering_link)
     await call.message.answer(f"🔗 Please enter the link for <b>{service['name']}</b>")
+
 
 # === User Enters Link ===
 @dp.message(OrderStates.entering_link)
