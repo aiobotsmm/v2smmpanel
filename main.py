@@ -34,6 +34,8 @@ from admin_contact import contact_router
 import secrets
 import datetime
 from asyncio import sleep
+# Group ID where admin notifications go
+GROUP_ID = -1002897201960  # Replace with your actual group ID
 
 async def auto_generate_tokens():
     while True:
