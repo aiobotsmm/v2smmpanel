@@ -43,12 +43,16 @@ async def handle_token(message: Message, state: FSMContext):
     token = message.text.strip()
     await state.update_data(token=token, user_id=message.from_user.id)
     await message.answer(
-        f"✅ Token verified!
-Use buttons below to continue.",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💼 My Wallet", callback_data="wallet")],
-            [InlineKeyboardButton(text="🛒 New Order", callback_data="new_order")]
-        ])
+    f"✅ Token verified!\n\n"
+    f"💼 Temporary Wallet: ₹{amount}\n"
+    f"🧾 TXN ID: <code>{txn_id}</code>\n\n"
+    "Choose an option:",
+    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💼 My Wallet", callback_data="wallet")],
+        [InlineKeyboardButton(text="🛒 New Order", callback_data="new_order")]
+    ])
+)
+
     )
 
 @dp.callback_query(F.data == "wallet")
