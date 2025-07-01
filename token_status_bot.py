@@ -10,17 +10,19 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.types import BotCommand
 from aiogram.filters import Command
 from aiogram import Router
+from aiogram.client.bot import DefaultBotProperties
 
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = "5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I"
 DATABASE = "yourdb.db"  # update this
 GROUP_ID = int(os.getenv("GROUP_ID"))
 
-bot = Bot(token=BOT_TOKEN, default=Bot.default(parse_mode=ParseMode.HTML))
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
