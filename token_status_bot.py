@@ -38,7 +38,7 @@ class OrderStates(StatesGroup):
 async def start_handler(message: types.Message, state: FSMContext):
     await state.set_state(OrderStates.awaiting_token)
     await message.answer(
-        "\ud83d\ude1e <b>Sorry for the delay in payment approval.</b>\n\n"
+        "⚠️ <b>Sorry for the delay in payment approval.</b>\n\n"
         "Please enter your <b>complaint token</b> to continue.",
         parse_mode="HTML"
     )
