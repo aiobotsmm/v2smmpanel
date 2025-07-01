@@ -191,7 +191,11 @@ async def confirm_order(call: types.CallbackQuery, state: FSMContext):
     await state.clear()
 
 # === Run Bot ===
+import asyncio
+
+async def main():
+    await dp.start_polling(bot)
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    from aiogram import executor
-    executor.start_polling(dp, skip_updates=True)
+    asyncio.run(main())
+
