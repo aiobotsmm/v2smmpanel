@@ -56,7 +56,7 @@ async def handle_token(message: types.Message, state: FSMContext):
     await state.update_data(token=token, user_id=user_id, amount=amount, txn_id=txn_id)
 
     await message.answer(
-        f"\ud83d\udcb0 Temporary Wallet: \u20b9{amount}\n\ud83d\udcdf TXN ID: <code>{txn_id}</code>\n\n"
+        f"✅ Temporary Wallet: \u20b9{amount}\n\ud83d\udcdf TXN ID: <code>{txn_id}</code>\n\n"
         "Choose an option below:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="\ud83d\udcbc My Wallet", callback_data="wallet")],
