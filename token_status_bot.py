@@ -14,7 +14,7 @@ import aiohttp
 
 # === Load ENV ===
 load_dotenv()
-BOT_TOKEN = os.getenv("SUPPORT_TOKEN_BOT")
+BOT_TOKEN = 5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I
 API_KEY = os.getenv("SMM_API_KEY")
 API_URL = os.getenv("SMM_API_URL")
 GROUP_ID = -1002897201960  # Hardcoded group
