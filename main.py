@@ -82,7 +82,7 @@ async def auto_generate_tokens():
             # Notify admin/group (optional)
             try:
                 await bot.send_message(
-                    chat_id=GROUP_ID,  # Or use ADMIN_ID
+                    GROUP_ID,  # Or use ADMIN_ID
                     text=(
                         f"📌 Token generated due to delay.\n\n"
                         f"👤 User ID: <code>{user_id}</code>\n"
