@@ -30,7 +30,71 @@ from admin_contact import contact_router
 #from contact import router as con_router
 #from admin import router as admin_router
 # from cancel import cancel_router  # Optional if you separate cancel handler
+#---auto token---#
+import secrets
+import datetime
+from asyncio import sleep
 
+async def auto_generate_tokens():
+    while True:
+        # ⏳ Check pending payments older than 60 min
+        sixty_minutes_ago = datetime.datetime.utcnow() - datetime.timedelta(minutes=01)
+        cur.execute("""
+            SELECT user_id, txn_id, amount FROM payments
+            WHERE status = 'pending' AND created_at <= ?
+        """, (sixty_minutes_ago,))
+        old_payments = cur.fetchall()
+
+        for user_id, txn_id, amount in old_payments:
+            # Check if token already exists
+            cur.execute("SELECT 1 FROM complaint_tokens WHERE txn_id = ?", (txn_id,))
+            if cur.fetchone():
+                continue  # Token already generated
+
+            # 🔐 Generate token
+            token = secrets.token_hex(4).upper()
+
+            # Save token
+            cur.execute("""
+                INSERT INTO complaint_tokens (token, user_id, txn_id, amount)
+                VALUES (?, ?, ?, ?)
+            """, (token, user_id, txn_id, amount))
+            conn.commit()
+
+            # Notify user
+            try:
+                await bot.send_message(
+                    chat_id=user_id,
+                    text=(
+                        f"⚠️ Your payment has not been approved in time.\n\n"
+                        f"🔐 Complaint Token: <code>{token}</code>\n"
+                        f"💸 Amount: ₹{amount}\n"
+                        f"📄 Txn ID: {txn_id}\n\n"
+                        f"You can now use this token temporarily in our Token Support Bot."
+                    ),
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                print(f"❌ Could not notify user {user_id}: {e}")
+
+            # Notify admin/group (optional)
+            try:
+                await bot.send_message(
+                    chat_id=GROUP_ID,  # Or use ADMIN_ID
+                    text=(
+                        f"📌 Token generated due to delay.\n\n"
+                        f"👤 User ID: <code>{user_id}</code>\n"
+                        f"💰 Amount: ₹{amount}\n"
+                        f"🧾 Txn ID: <code>{txn_id}</code>\n"
+                        f"🔐 Token: <code>{token}</code>"
+                    ),
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                print(f"❌ Could not notify admin: {e}")
+
+        await sleep(01)  # Repeat every minute
+#-------------------------------------------------
 # FastAPI for health check (Optional but useful for Azure/uptime monitors)
 app = FastAPI()
 
