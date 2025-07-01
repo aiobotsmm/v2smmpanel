@@ -1,107 +1,91 @@
 import asyncio
-import aiohttp
-from aiogram import Bot, Dispatcher, F, Router, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+import secrets
+import sqlite3  # or use mysql.connector for MySQL
+from aiogram import Bot, Dispatcher, F
 from aiogram.enums import ParseMode
-from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message
-from dotenv import load_dotenv
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.types import BotCommand
 from aiogram.filters import Command
-import os
-import random
+from aiogram import Router
 
-# === Load .env
+from dotenv import load_dotenv
+import os
+
 load_dotenv()
 
-# === Constants from .env
-BOT_TOKEN = "5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I"
-API_KEY = os.getenv("SMM_API_KEY")
-API_URL = os.getenv("SMM_API_URL")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+DATABASE = "yourdb.db"  # update this
 GROUP_ID = int(os.getenv("GROUP_ID"))
 
-# === Init
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher(storage=MemoryStorage())
+bot = Bot(token=BOT_TOKEN, default=Bot.default(parse_mode=ParseMode.HTML))
+dp = Dispatcher()
 router = Router()
 dp.include_router(router)
 
-# === FSM States
+conn = sqlite3.connect(DATABASE)
+cur = conn.cursor()
+
+
 class OrderStates(StatesGroup):
     waiting_token = State()
-    main_menu = State()
     browsing_services = State()
-    confirming_service = State()
     entering_link = State()
     entering_quantity = State()
     confirm_order = State()
 
-# === TEMP DB
-USER_DB = {}  # {user_id: {'token': xxx, 'amount': xxx, 'txn_id': xxx}}
 
-# === /start
 @router.message(Command("start"))
-async def handle_token(message: Message, state: FSMContext):
-    await message.answer("🔑 Please enter your token to proceed:")
+async def start_handler(message: Message, state: FSMContext):
     await state.set_state(OrderStates.waiting_token)
+    await message.answer("🔐 Please enter your 8-digit token to verify.")
 
 
 @router.message(OrderStates.waiting_token)
-async def verify_token(message: Message, state: FSMContext):
-    token = message.text.strip()
+async def handle_token(message: Message, state: FSMContext):
+    token = message.text.strip().upper()
 
-    # ✅ 1. Fetch wallet data from your DB/API using the token
-    try:
-        async with aiohttp.ClientSession() as session:
-        
-            async with session.post("https://your-api.com/check_token", data={"token": token}) as resp:
-                data = await resp.json()
-    except Exception:
-        return await message.answer("❌ Failed to fetch data. Please try again later.")
+    cur.execute("SELECT user_id, txn_id, amount FROM complaint_tokens WHERE token = ?", (token,))
+    result = cur.fetchone()
 
-    # ✅ 2. Check if token is valid and extract amount/txn_id
-    if not data.get("status") == "success":
-        return await message.answer("❌ Invalid token!")
+    if not result:
+        return await message.answer("❌ Invalid token. Please check again.")
 
-    amount = data.get("amount")
-    txn_id = data.get("txn_id")
+    user_id, txn_id, amount = result
+    await state.update_data(token=token, user_id=user_id, txn_id=txn_id, amount=amount)
 
-    if not amount or not txn_id:
-        return await message.answer("⚠️ Could not fetch wallet info.")
+    # Show wallet info + reply keyboard
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="💼 My Wallet")],
+            [KeyboardButton(text="🛒 New Order")]
+        ],
+        resize_keyboard=True
+    )
 
-    # ✅ 3. Save in memory
-    user_id = message.from_user.id
-    USER_DB[user_id] = {
-        "token": token,
-        "amount": amount,
-        "txn_id": txn_id,
-    }
+    await state.set_state(OrderStates.browsing_services)
 
-    await state.clear()
     await message.answer(
-        f"✅ Token verified!\n\n"
-        f"💼 Temporary Wallet: ₹{amount}\n"
+        f"✅ Token Verified!\n\n"
+        f"💼 Wallet: ₹{amount}\n"
         f"🧾 TXN ID: <code>{txn_id}</code>\n\n"
-        "Choose an option:",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="🧾 My Wallet")], [KeyboardButton(text="🆕 New Order")]],
-            resize_keyboard=True
-        )
+        f"Choose an option below:",
+        reply_markup=keyboard
     )
 
 
-# === My Wallet
-@router.message(F.text == "👜 My Wallet")
-async def wallet(message: Message):
-    user_data = USER_DB.get(message.from_user.id)
-    if not user_data:
-        return await message.answer("❌ Token not found. Please use /start again.")
+@router.message(F.text == "💼 My Wallet")
+async def show_wallet(message: Message, state: FSMContext):
+    data = await state.get_data()
+    amount = data.get("amount", "0.00")
+    await message.answer(f"💼 Your current wallet balance is ₹{amount}")
 
-    await message.answer(f"💰 Your Wallet Balance: ₹{user_data['amount']}")
+
+# you can now continue the order flow
+# handle "🛒 New Order" to fetch services and process
+
 
 # === New Order Menu
 @router.message(F.text == "🆕 New Order")
