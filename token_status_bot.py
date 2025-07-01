@@ -53,8 +53,6 @@ async def handle_token(message: Message, state: FSMContext):
     ])
 )
 
-    )
-
 @dp.callback_query(F.data == "wallet")
 async def wallet_info(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
