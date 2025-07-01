@@ -56,13 +56,13 @@ async def handle_token(message: types.Message, state: FSMContext):
     await state.update_data(token=token, user_id=user_id, amount=amount, txn_id=txn_id)
 
     await message.answer(
-        f"✅ Temporary Wallet: \u20b9{amount}\n\ud83d\udcdf TXN ID: <code>{txn_id}</code>\n\n"
-        "Choose an option below:",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="\ud83d\udcbc My Wallet", callback_data="wallet")],
-            [InlineKeyboardButton(text="\ud83d\ude96 New Order", callback_data="new_order")]
-        ])
-    )
+    f"✅ Temporary Wallet: ₹{amount}\n🧾 TXN ID: <code>{txn_id}</code>\n\n"
+    "Choose an option below:",
+    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💼 My Wallet", callback_data="wallet")],
+        [InlineKeyboardButton(text="🛒 New Order", callback_data="new_order")]
+    ])
+)
 
 # === Wallet Info ===
 @dp.callback_query(F.data == "wallet")
