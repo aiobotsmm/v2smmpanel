@@ -16,7 +16,7 @@ import random
 load_dotenv()
 
 # === Constants from .env
-BOT_TOKEN = os.getenv("API_TOKEN")
+BOT_TOKEN = "5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I"
 API_KEY = os.getenv("SMM_API_KEY")
 API_URL = os.getenv("SMM_API_URL")
 GROUP_ID = int(os.getenv("GROUP_ID"))
