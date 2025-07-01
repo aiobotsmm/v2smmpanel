@@ -41,37 +41,53 @@ class OrderStates(StatesGroup):
 USER_DB = {}  # {user_id: {'token': xxx, 'amount': xxx, 'txn_id': xxx}}
 
 # === /start
-@router.message(F.text == "/start")
-async def start_handler(message: Message, state: FSMContext):
-    await state.set_state(OrderStates.waiting_token)
-    await message.answer("🙋‍♂️ Welcome!\n\nPlease enter your token to continue.\nIf you don’t have one, generate it from our main bot.\n\nWe apologize for this extra step 🙏")
-
-# === Handle token input
-@router.message(OrderStates.waiting_token)
+@router.message(Command("start"))
 async def handle_token(message: Message, state: FSMContext):
-    token = message.text.strip()
-    amount = random.randint(50, 500)
-    txn_id = f"TXN{random.randint(10000,99999)}"
+    await message.answer("🔑 Please enter your token to proceed:")
+    await state.set_state(OrderStates.awaiting_token)
 
-    USER_DB[message.from_user.id] = {
+@router.message(OrderStates.awaiting_token)
+async def verify_token(message: Message, state: FSMContext):
+    token = message.text.strip()
+
+    # ✅ 1. Fetch wallet data from your DB/API using the token
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post("https://yourdomain/api/token_verify", data={"token": token}) as resp:
+                data = await resp.json()
+    except Exception:
+        return await message.answer("❌ Failed to fetch data. Please try again later.")
+
+    # ✅ 2. Check if token is valid and extract amount/txn_id
+    if not data.get("status") == "success":
+        return await message.answer("❌ Invalid token!")
+
+    amount = data.get("amount")
+    txn_id = data.get("txn_id")
+
+    if not amount or not txn_id:
+        return await message.answer("⚠️ Could not fetch wallet info.")
+
+    # ✅ 3. Save in memory
+    user_id = message.from_user.id
+    USER_DB[user_id] = {
         "token": token,
         "amount": amount,
-        "txn_id": txn_id
+        "txn_id": txn_id,
     }
 
-    await state.set_state(OrderStates.main_menu)
-    btns = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="👜 My Wallet")],
-            [KeyboardButton(text="🆕 New Order")]
-        ],
-        resize_keyboard=True
+    await state.clear()
+    await message.answer(
+        f"✅ Token verified!\n\n"
+        f"💼 Temporary Wallet: ₹{amount}\n"
+        f"🧾 TXN ID: <code>{txn_id}</code>\n\n"
+        "Choose an option:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="🧾 My Wallet")], [KeyboardButton(text="🆕 New Order")]],
+            resize_keyboard=True
+        )
     )
 
-    await message.answer(
-        f"✅ Token verified!\n\n💼 Temporary Wallet: ₹{amount}\n🧾 TXN ID: <code>{txn_id}</code>\n\nChoose an option:",
-        reply_markup=btns
-    )
 
 # === My Wallet
 @router.message(F.text == "👜 My Wallet")
