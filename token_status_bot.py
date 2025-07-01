@@ -69,7 +69,8 @@ async def handle_token(message: types.Message, state: FSMContext):
 async def wallet_info(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     amount = data.get("amount")
-    await call.message.edit_text(f"\ud83d\udcbc Your temporary wallet balance is \u20b9{amount}")
+    await call.message.edit_text(f"💼 Your temporary wallet balance is ₹{amount}")
+
 
 # === New Order Start ===
 @dp.callback_query(F.data == "new_order")
@@ -92,20 +93,20 @@ async def show_services(message: types.Message, state: FSMContext, page: int):
     kb = InlineKeyboardBuilder()
     for svc in current_services:
         kb.button(
-            text=f"{svc['name']} - \u20b9{svc['rate']}/1k",
+            text=f"{svc['name']} - ₹{svc['rate']}/1k",
             callback_data=f"svc_{svc['service']}"
         )
 
     nav = []
     if page > 1:
-        nav.append(InlineKeyboardButton(text="\u2b05\ufe0f Prev", callback_data=f"page_{page-1}"))
+        nav.append(InlineKeyboardButton(text="⬅️ Prev", callback_data=f"page_{page-1}"))
     if end < total:
-        nav.append(InlineKeyboardButton(text="\u27a1\ufe0f Next", callback_data=f"page_{page+1}"))
+        nav.append(InlineKeyboardButton(text="➡️ Next", callback_data=f"page_{page+1}"))
     if nav:
         kb.row(*nav)
 
     await state.update_data(all_services=services, current_page=page)
-    await message.edit_text("\ud83c\udfe9 Choose a service:", reply_markup=kb.as_markup())
+    await message.edit_text("🏡 Choose a service:", reply_markup=kb.as_markup())
 
 @dp.callback_query(F.data.startswith("page_"))
 async def paginate_services(call: types.CallbackQuery, state: FSMContext):
@@ -120,39 +121,43 @@ async def service_selected(call: types.CallbackQuery, state: FSMContext):
     all_services = data.get("all_services")
     service = next((s for s in all_services if s['service'] == service_id), None)
     if not service:
-        return await call.message.answer("Service not found.")
+        return await call.message.answer("❌ Service not found.")
 
     await state.update_data(service=service)
     await state.set_state(OrderStates.entering_link)
-    await call.message.answer(f"\ud83d\udd17 Enter the link for {service['name']}")
+    await call.message.answer(f"🔗 Enter the link for <b>{service['name']}</b>")
 
 # === Link Input ===
 @dp.message(OrderStates.entering_link)
 async def handle_link(message: types.Message, state: FSMContext):
     await state.update_data(link=message.text.strip())
     await state.set_state(OrderStates.entering_quantity)
-    await message.answer("\ud83d\udce6 Enter the quantity:")
+    await message.answer("📦 Enter the quantity:")
 
 # === Quantity Input ===
 @dp.message(OrderStates.entering_quantity)
 async def handle_quantity(message: types.Message, state: FSMContext):
-    qty = int(message.text.strip())
+    try:
+        qty = int(message.text.strip())
+    except ValueError:
+        return await message.answer("❌ Invalid quantity. Please enter a number.")
+
     data = await state.get_data()
     service = data['service']
     total_price = (qty / 1000) * float(service['rate'])
     await state.update_data(quantity=qty, total_price=total_price)
 
     desc = (
-        f"\ud83e\uddbe <b>Order Preview:</b>\n\n"
-        f"\ud83d\udd39 Service: {service['name']}\n"
-        f"\ud83d\udd17 Link: {data['link']}\n"
-        f"\ud83d\udce6 Quantity: {qty}\n"
-        f"\ud83d\udcb0 Price: \u20b9{total_price:.2f}"
+        f"🧾 <b>Order Preview:</b>\n\n"
+        f"🔹 <b>Service:</b> {service['name']}\n"
+        f"🔗 <b>Link:</b> {data['link']}\n"
+        f"📦 <b>Quantity:</b> {qty}\n"
+        f"💰 <b>Price:</b> ₹{total_price:.2f}"
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="\u2705 Confirm", callback_data="confirm_order")],
-        [InlineKeyboardButton(text="\u274c Cancel", callback_data="cancel_order")]
+        [InlineKeyboardButton(text="✅ Confirm", callback_data="confirm_order")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_order")]
     ])
     await state.set_state(OrderStates.confirm_order)
     await message.answer(desc, reply_markup=kb)
@@ -161,34 +166,35 @@ async def handle_quantity(message: types.Message, state: FSMContext):
 @dp.callback_query(F.data == "cancel_order")
 async def cancel_order(call: types.CallbackQuery, state: FSMContext):
     await state.clear()
-    await call.message.answer("\u274c Order cancelled.")
+    await call.message.answer("❌ Order cancelled.")
 
 # === Confirm ===
 @dp.callback_query(F.data == "confirm_order")
 async def confirm_order(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    user_id = data['user_id']
-    token = data['token']
+    user_id = call.from_user.id
+    token = data.get('token', 'N/A')
     link = data['link']
     qty = data['quantity']
     service = data['service']
     total_price = data['total_price']
 
-    # send to group
+    # Send to group
     msg = (
-        f"\ud83c\udd99\ufe0f <b>New Temp Order (Token)</b>\n\n"
-        f"\ud83d\udc64 User ID: <code>{user_id}</code>\n"
-        f"\ud83d\udd16 Token: <code>{token}</code>\n"
-        f"\ud83d\udd39 Service: {service['name']}\n"
-        f"\ud83d\udd17 Link: {link}\n"
-        f"\ud83d\udce6 Qty: {qty}\n"
-        f"\ud83d\udcb0 Price: \u20b9{total_price:.2f}\n\n"
-        f"Please confirm or reject this order."
+        f"🆕 <b>New Temp Order</b>\n\n"
+        f"👤 <b>User ID:</b> <code>{user_id}</code>\n"
+        f"🔑 <b>Token:</b> <code>{token}</code>\n"
+        f"🔹 <b>Service:</b> {service['name']}\n"
+        f"🔗 <b>Link:</b> {link}\n"
+        f"📦 <b>Qty:</b> {qty}\n"
+        f"💰 <b>Price:</b> ₹{total_price:.2f}\n\n"
+        f"⚠️ Please confirm or reject this order."
     )
 
     await bot.send_message(GROUP_ID, msg)
-    await call.message.edit_text("\u2705 Order sent to admin for approval.\n\n\u23f3 Waiting for confirmation...")
+    await call.message.edit_text("✅ Order sent to admin for approval.\n\n⏳ Waiting for confirmation...")
     await state.clear()
+
 
 # === Run Bot ===
 import asyncio
