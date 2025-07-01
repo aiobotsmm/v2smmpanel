@@ -72,17 +72,29 @@ async def wallet_info(call: types.CallbackQuery, state: FSMContext):
     await call.message.edit_text(f"💼 Your temporary wallet balance is ₹{amount}")
 
 
-# === New Order Start ===
+
+
+# === Start Order Process ===
 @dp.callback_query(F.data == "new_order")
 async def start_order(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    if not all(k in data for k in ("user_id", "token", "amount")):
+        return await call.message.answer("❌ Missing token session. Please /start again.")
+
     await state.set_state(OrderStates.browsing_services)
     await show_services(call.message, state, page=1)
 
-# === Show Services with Pagination ===
+# === Show SMM Services with Pagination ===
 async def show_services(message: types.Message, state: FSMContext, page: int):
-    async with aiohttp.ClientSession() as session:
-        async with session.post(API_URL, data={"key": API_KEY, "action": "services"}) as resp:
-            services = await resp.json()
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(API_URL, data={"key": API_KEY, "action": "services"}) as resp:
+                services = await resp.json()
+    except Exception as e:
+        return await message.answer(f"❌ Failed to load services.\n{str(e)}")
+
+    if not services:
+        return await message.answer("❌ No services found from API.")
 
     per_page = 8
     total = len(services)
@@ -106,35 +118,37 @@ async def show_services(message: types.Message, state: FSMContext, page: int):
         kb.row(*nav)
 
     await state.update_data(all_services=services, current_page=page)
-    await message.edit_text("🏡 Choose a service:", reply_markup=kb.as_markup())
+    await message.edit_text("📋 Select a service to order:", reply_markup=kb.as_markup())
 
+# === Pagination for Services ===
 @dp.callback_query(F.data.startswith("page_"))
 async def paginate_services(call: types.CallbackQuery, state: FSMContext):
     page = int(call.data.split("_")[1])
     await show_services(call.message, state, page)
 
-# === Service Selected ===
+# === When a Service is Selected ===
 @dp.callback_query(F.data.startswith("svc_"))
 async def service_selected(call: types.CallbackQuery, state: FSMContext):
     service_id = int(call.data.split("_")[1])
     data = await state.get_data()
-    all_services = data.get("all_services")
-    service = next((s for s in all_services if s['service'] == service_id), None)
+    all_services = data.get("all_services", [])
+
+    service = next((s for s in all_services if int(s['service']) == service_id), None)
     if not service:
         return await call.message.answer("❌ Service not found.")
 
     await state.update_data(service=service)
     await state.set_state(OrderStates.entering_link)
-    await call.message.answer(f"🔗 Enter the link for <b>{service['name']}</b>")
+    await call.message.answer(f"🔗 Please enter the link for <b>{service['name']}</b>")
 
-# === Link Input ===
+# === User Enters Link ===
 @dp.message(OrderStates.entering_link)
 async def handle_link(message: types.Message, state: FSMContext):
     await state.update_data(link=message.text.strip())
     await state.set_state(OrderStates.entering_quantity)
-    await message.answer("📦 Enter the quantity:")
+    await message.answer("🔢 Enter the quantity:")
 
-# === Quantity Input ===
+# === User Enters Quantity ===
 @dp.message(OrderStates.entering_quantity)
 async def handle_quantity(message: types.Message, state: FSMContext):
     try:
@@ -148,52 +162,53 @@ async def handle_quantity(message: types.Message, state: FSMContext):
     await state.update_data(quantity=qty, total_price=total_price)
 
     desc = (
-        f"🧾 <b>Order Preview:</b>\n\n"
-        f"🔹 <b>Service:</b> {service['name']}\n"
-        f"🔗 <b>Link:</b> {data['link']}\n"
-        f"📦 <b>Quantity:</b> {qty}\n"
-        f"💰 <b>Price:</b> ₹{total_price:.2f}"
+        f"🧾 <b>Order Preview:</b>\n"
+        f"🛎️ Service: <b>{service['name']}</b>\n"
+        f"🔗 Link: <code>{data['link']}</code>\n"
+        f"🔢 Quantity: {qty}\n"
+        f"💰 Total Price: ₹{total_price:.2f}"
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Confirm", callback_data="confirm_order")],
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_order")]
+        [InlineKeyboardButton(text="✅ Confirm Order", callback_data="confirm_order")],
+        [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
     ])
+
     await state.set_state(OrderStates.confirm_order)
     await message.answer(desc, reply_markup=kb)
 
-# === Cancel ===
+# === Cancel Order ===
 @dp.callback_query(F.data == "cancel_order")
 async def cancel_order(call: types.CallbackQuery, state: FSMContext):
     await state.clear()
-    await call.message.answer("❌ Order cancelled.")
+    await call.message.edit_text("❌ Your order has been cancelled.")
 
-# === Confirm ===
+# === Confirm Order and Notify Admin ===
 @dp.callback_query(F.data == "confirm_order")
 async def confirm_order(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     user_id = call.from_user.id
-    token = data.get('token', 'N/A')
-    link = data['link']
-    qty = data['quantity']
-    service = data['service']
-    total_price = data['total_price']
+    token = data.get("token", "unknown")
+    service = data["service"]
+    link = data["link"]
+    qty = data["quantity"]
+    total_price = data["total_price"]
 
-    # Send to group
-    msg = (
-        f"🆕 <b>New Temp Order</b>\n\n"
-        f"👤 <b>User ID:</b> <code>{user_id}</code>\n"
-        f"🔑 <b>Token:</b> <code>{token}</code>\n"
-        f"🔹 <b>Service:</b> {service['name']}\n"
-        f"🔗 <b>Link:</b> {link}\n"
-        f"📦 <b>Qty:</b> {qty}\n"
-        f"💰 <b>Price:</b> ₹{total_price:.2f}\n\n"
-        f"⚠️ Please confirm or reject this order."
+    order_text = (
+        f"📥 <b>New Token Order</b>\n\n"
+        f"👤 User ID: <code>{user_id}</code>\n"
+        f"🔑 Token: <code>{token}</code>\n"
+        f"🛎️ Service: {service['name']}\n"
+        f"🔗 Link: {link}\n"
+        f"🔢 Quantity: {qty}\n"
+        f"💰 Price: ₹{total_price:.2f}\n\n"
+        "✅ Please approve or reject this order."
     )
 
-    await bot.send_message(GROUP_ID, msg)
-    await call.message.edit_text("✅ Order sent to admin for approval.\n\n⏳ Waiting for confirmation...")
+    await bot.send_message(GROUP_ID, order_text)
+    await call.message.edit_text("✅ Order sent to admin.\n⏳ Waiting for confirmation...")
     await state.clear()
+
 
 
 # === Run Bot ===
