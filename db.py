@@ -39,7 +39,7 @@ def initialize_database():
         amount REAL,
         txn_id TEXT UNIQUE,
         status TEXT DEFAULT 'pending'
-        created_at TEXT DEFAULT (datetime('now'))
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS complaint_tokens (
