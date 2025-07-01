@@ -38,7 +38,9 @@ from asyncio import sleep
 async def auto_generate_tokens():
     while True:
         # ⏳ Check pending payments older than 60 min
-        sixty_minutes_ago = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
+        from datetime import datetime, timedelta, timezone
+        sixty_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
+
         cur.execute("""
             SELECT user_id, txn_id, amount FROM payments
             WHERE status = 'pending' AND created_at <= ?
