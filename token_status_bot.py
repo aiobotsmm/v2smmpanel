@@ -11,7 +11,7 @@ from aiogram.types import BotCommand
 from aiogram.filters import Command
 from aiogram import Router
 from aiogram.client.bot import DefaultBotProperties
-
+from db import cur, conn, bot
 from dotenv import load_dotenv
 import os
 
@@ -26,9 +26,6 @@ bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTM
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
-
-conn = sqlite3.connect(DATABASE)
-cur = conn.cursor()
 
 
 class OrderStates(StatesGroup):
