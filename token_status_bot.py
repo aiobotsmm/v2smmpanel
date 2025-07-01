@@ -1,201 +1,254 @@
-# token_status_bot.py
-
-import logging
-import aiohttp
 import asyncio
-from aiogram import Bot, Dispatcher, types, F
+import aiohttp
+from aiogram import Bot, Dispatcher, F, Router, types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
-from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.filters import CommandStart
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import Message
 from dotenv import load_dotenv
 import os
 import random
-import string
 
-# Load env
+# === Load .env
 load_dotenv()
 
-BOT_TOKEN = "5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I"
-GROUP_ID = int(os.getenv("GROUP_ID"))
+# === Constants from .env
+BOT_TOKEN = os.getenv("API_TOKEN")
 API_KEY = os.getenv("SMM_API_KEY")
 API_URL = os.getenv("SMM_API_URL")
+GROUP_ID = int(os.getenv("GROUP_ID"))
 
+# === Init
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
+router = Router()
+dp.include_router(router)
 
-# FSM
+# === FSM States
 class OrderStates(StatesGroup):
+    waiting_token = State()
+    main_menu = State()
     browsing_services = State()
+    confirming_service = State()
     entering_link = State()
     entering_quantity = State()
     confirm_order = State()
 
+# === TEMP DB
+USER_DB = {}  # {user_id: {'token': xxx, 'amount': xxx, 'txn_id': xxx}}
 
-# Start command
-@dp.message(CommandStart())
-async def start_handler(message: types.Message, state: FSMContext):
-    token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    amount = random.randint(30, 100)  # Simulate wallet amount
-    txn_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
+# === /start
+@router.message(F.text == "/start")
+async def start_handler(message: Message, state: FSMContext):
+    await state.set_state(OrderStates.waiting_token)
+    await message.answer("🙋‍♂️ Welcome!\n\nPlease enter your token to continue.\nIf you don’t have one, generate it from our main bot.\n\nWe apologize for this extra step 🙏")
 
-    await state.set_data({
+# === Handle token input
+@router.message(OrderStates.waiting_token)
+async def handle_token(message: Message, state: FSMContext):
+    token = message.text.strip()
+    amount = random.randint(50, 500)
+    txn_id = f"TXN{random.randint(10000,99999)}"
+
+    USER_DB[message.from_user.id] = {
         "token": token,
         "amount": amount,
-        "txn_id": txn_id,
-        "user_id": message.from_user.id
-    })
+        "txn_id": txn_id
+    }
 
-    await message.answer(
-        f"✅ Token verified!\n\n"
-        f"💼 Temporary Wallet: ₹{amount}\n"
-        f"🧾 TXN ID: <code>{txn_id}</code>\n\n"
-        "Choose an option below:",
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="💼 My Wallet", callback_data="wallet")],
-                [InlineKeyboardButton(text="🛒 New Order", callback_data="new_order")]
-            ]
-        )
+    await state.set_state(OrderStates.main_menu)
+    btns = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="👜 My Wallet")],
+            [KeyboardButton(text="🆕 New Order")]
+        ],
+        resize_keyboard=True
     )
 
-# Wallet
-@dp.callback_query(F.data == "wallet")
-async def wallet_info(call: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    amount = data.get("amount")
-    await call.message.answer(f"💼 Your temporary wallet balance is ₹{amount}")
+    await message.answer(
+        f"✅ Token verified!\n\n💼 Temporary Wallet: ₹{amount}\n🧾 TXN ID: <code>{txn_id}</code>\n\nChoose an option:",
+        reply_markup=btns
+    )
 
-# New Order
-@dp.callback_query(F.data == "new_order")
-async def start_order(call: types.CallbackQuery, state: FSMContext):
+# === My Wallet
+@router.message(F.text == "👜 My Wallet")
+async def wallet(message: Message):
+    user_data = USER_DB.get(message.from_user.id)
+    if not user_data:
+        return await message.answer("❌ Token not found. Please use /start again.")
+
+    await message.answer(f"💰 Your Wallet Balance: ₹{user_data['amount']}")
+
+# === New Order Menu
+@router.message(F.text == "🆕 New Order")
+async def start_order(message: Message, state: FSMContext):
     await state.set_state(OrderStates.browsing_services)
-    await show_services(call.message, state, page=1)
+    await show_services(message, state, page=1)
 
-# Show services
-async def show_services(message: types.Message, state: FSMContext, page: int):
+# === Show Services with Pagination (Vertical List)
+async def show_services(message: Message, state: FSMContext, page: int):
     async with aiohttp.ClientSession() as session:
-        async with session.post(API_URL, data={"key": API_KEY, "action": "services"}) as resp:
-            services = await resp.json()
+        try:
+            async with session.post(API_URL, data={"key": API_KEY, "action": "services"}) as resp:
+                services = await resp.json()
+        except Exception:
+            return await message.answer("⚠️ Failed to fetch services. Please try again later.")
 
-    per_page = 8
+    per_page = 5
     total = len(services)
     start = (page - 1) * per_page
     end = start + per_page
     current_services = services[start:end]
 
-    kb = InlineKeyboardBuilder()
-    for svc in current_services:
-        profit_rate = round(float(svc['rate']) * 1.10, 2)
-        kb.button(
-            text=f"{svc['name']} | ₹{profit_rate}/1k",
-            callback_data=f"svc_{svc['service']}"
-        )
+    if not current_services:
+        return await message.answer("❌ No services found.")
 
-    nav = []
+    text = "📦 <b>Available Services:</b>\n\n"
+    btns = []
+
+    for svc in current_services:
+        rate = round(float(svc['rate']) * 1.1, 2)  # add 10%
+        text += f"🔹 {svc['name']} - ₹{rate}/1k\n"
+        btns.append([KeyboardButton(text=f"{svc['name']}")])
+
+    # Pagination
     if page > 1:
-        nav.append(InlineKeyboardButton(text="⬅️ Prev", callback_data=f"page_{page-1}"))
+        btns.append([KeyboardButton(text=f"⬅️ Prev Page {page-1}")])
     if end < total:
-        nav.append(InlineKeyboardButton(text="➡️ Next", callback_data=f"page_{page+1}"))
-    if nav:
-        kb.row(*nav)
+        btns.append([KeyboardButton(text=f"➡️ Next Page {page+1}")])
 
     await state.update_data(all_services=services, current_page=page)
-    await message.answer("🏪 Choose a service:", reply_markup=kb.as_markup())
+    markup = ReplyKeyboardMarkup(keyboard=btns, resize_keyboard=True)
+    await message.answer(text + "\nTap a service to view more ↓", reply_markup=markup)
 
-@dp.callback_query(F.data.startswith("page_"))
-async def paginate_services(call: types.CallbackQuery, state: FSMContext):
-    page = int(call.data.split("_")[1])
-    await show_services(call.message, state, page)
+# === Pagination handler
+@router.message(F.text.startswith("⬅️") | F.text.startswith("➡️"))
+async def handle_pagination(message: Message, state: FSMContext):
+    parts = message.text.split("Page")
+    if len(parts) == 2:
+        page = int(parts[1].strip())
+        await show_services(message, state, page=page)
 
-@dp.callback_query(F.data.startswith("svc_"))
-async def service_selected(call: types.CallbackQuery, state: FSMContext):
-    service_id = int(call.data.split("_")[1])
+# === Handle service selection → show full description
+@router.message(OrderStates.browsing_services)
+async def service_detail(message: Message, state: FSMContext):
     data = await state.get_data()
-    all_services = data.get("all_services")
-    service = next((s for s in all_services if s['service'] == service_id), None)
-    if not service:
-        return await call.message.answer("Service not found.")
+    all_services = data.get("all_services", [])
 
-    profit_rate = round(float(service['rate']) * 1.10, 2)
-    await state.update_data(service=service)
+    svc_name = message.text.strip()
+    matched = next((s for s in all_services if s["name"].lower() == svc_name.lower()), None)
+
+    if not matched:
+        return await message.answer("❌ Service not found.")
+
+    rate = round(float(matched['rate']) * 1.1, 2)
+    desc = (
+        f"📝 <b>Service Details:</b>\n\n"
+        f"🔸 <b>Name:</b> {matched['name']}\n"
+        f"💰 <b>Price:</b> ₹{rate}/1k\n"
+        f"📉 <b>Min:</b> {matched.get('min')}, 📈 <b>Max:</b> {matched.get('max')}\n"
+        f"⚡ <b>Speed:</b> {matched.get('speed')}\n"
+        f"ℹ️ <b>Desc:</b> {matched.get('desc') or 'No description'}\n\n"
+        f"👉 Press 'Continue' to enter link"
+    )
+
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="✅ Continue")], [KeyboardButton(text="⬅️ Back to Services")]],
+        resize_keyboard=True
+    )
+
+    await state.update_data(service=matched)
     await state.set_state(OrderStates.entering_link)
-
-    desc = (
-        f"🛎 <b>{service['name']}</b>\n"
-        f"💸 Price per 1k: ₹{profit_rate}\n"
-        f"🔢 Min: {service['min']} | Max: {service['max']}\n"
-        f"🚀 Speed: {service.get('speed', 'N/A')}\n"
-        f"ℹ️ Description: {service.get('desc', 'No description available')}\n\n"
-        "Please send the link to proceed."
-    )
-    await call.message.answer(desc)
-
-@dp.message(OrderStates.entering_link)
-async def handle_link(message: types.Message, state: FSMContext):
-    await state.update_data(link=message.text.strip())
-    await state.set_state(OrderStates.entering_quantity)
-    await message.answer("📦 Enter the quantity:")
-
-@dp.message(OrderStates.entering_quantity)
-async def handle_quantity(message: types.Message, state: FSMContext):
-    qty = int(message.text.strip())
-    data = await state.get_data()
-    service = data['service']
-    rate = round(float(service['rate']) * 1.10, 2)
-    total_price = (qty / 1000) * rate
-    await state.update_data(quantity=qty, total_price=total_price)
-
-    desc = (
-        f"🧾 <b>Order Preview:</b>\n\n"
-        f"📦 Service: {service['name']}\n"
-        f"🔗 Link: {data['link']}\n"
-        f"🔢 Quantity: {qty}\n"
-        f"💰 Price: ₹{total_price:.2f}"
-    )
-
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Confirm", callback_data="confirm_order")],
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_order")]
-    ])
-    await state.set_state(OrderStates.confirm_order)
     await message.answer(desc, reply_markup=kb)
 
-@dp.callback_query(F.data == "cancel_order")
-async def cancel_order(call: types.CallbackQuery, state: FSMContext):
-    await state.clear()
-    await call.message.answer("❌ Order cancelled.")
-
-@dp.callback_query(F.data == "confirm_order")
-async def confirm_order(call: types.CallbackQuery, state: FSMContext):
+# === Back to Services
+@router.message(F.text == "⬅️ Back to Services")
+async def go_back_to_services(message: Message, state: FSMContext):
     data = await state.get_data()
-    user_id = data['user_id']
-    token = data['token']
-    link = data['link']
-    qty = data['quantity']
-    service = data['service']
-    total_price = data['total_price']
+    page = data.get("current_page", 1)
+    await show_services(message, state, page)
 
-    msg = (
-        f"🆕 <b>New Temp Order (Token)</b>\n\n"
-        f"🧑 User ID: <code>{user_id}</code>\n"
-        f"🔑 Token: <code>{token}</code>\n"
-        f"📦 Service: {service['name']}\n"
-        f"🔗 Link: {link}\n"
-        f"🔢 Qty: {qty}\n"
-        f"💰 Price: ₹{total_price:.2f}\n\n"
-        f"Please confirm or reject this order."
+# === Enter link
+@router.message(OrderStates.entering_link, F.text == "✅ Continue")
+async def ask_link(message: Message, state: FSMContext):
+    await message.answer("🔗 Please enter the link for this order:", reply_markup=ReplyKeyboardRemove())
+
+@router.message(OrderStates.entering_link)
+async def receive_link(message: Message, state: FSMContext):
+    link = message.text.strip()
+    await state.update_data(link=link)
+    await state.set_state(OrderStates.entering_quantity)
+    await message.answer("🔢 Enter the quantity you want:")
+
+# === Enter quantity
+@router.message(OrderStates.entering_quantity)
+async def receive_quantity(message: Message, state: FSMContext):
+    try:
+        qty = int(message.text.strip())
+    except ValueError:
+        return await message.answer("❌ Please enter a valid number.")
+
+    data = await state.get_data()
+    service = data["service"]
+    rate = round(float(service["rate"]) * 1.1, 2)  # 10% profit
+    total = (qty / 1000) * rate
+
+    await state.update_data(quantity=qty, total_price=total)
+    preview = (
+        f"📦 <b>Order Preview</b>\n\n"
+        f"🔸 <b>Service:</b> {service['name']}\n"
+        f"🔗 <b>Link:</b> {data['link']}\n"
+        f"🔢 <b>Quantity:</b> {qty}\n"
+        f"💰 <b>Total Price:</b> ₹{total:.2f}\n\n"
+        f"Do you want to confirm this order?"
     )
 
-    await bot.send_message(GROUP_ID, msg)
-    await call.message.answer("✅ Order sent to admin for approval.\n⏳ Waiting for confirmation...")
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="✅ Confirm Order")],
+            [KeyboardButton(text="❌ Cancel")]
+        ],
+        resize_keyboard=True
+    )
+
+    await state.set_state(OrderStates.confirm_order)
+    await message.answer(preview, reply_markup=kb)
+
+# === Cancel order
+@router.message(F.text == "❌ Cancel")
+async def cancel_order(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("❌ Order cancelled.", reply_markup=ReplyKeyboardRemove())
+
+# === Confirm order
+@router.message(F.text == "✅ Confirm Order")
+async def confirm_order(message: Message, state: FSMContext):
+    data = await state.get_data()
+    user_id = message.from_user.id
+    user_data = USER_DB.get(user_id)
+
+    if not user_data:
+        return await message.answer("❌ Token expired. Please /start again.")
+
+    order_msg = (
+        f"📥 <b>New Temp Order (Token)</b>\n\n"
+        f"👤 User ID: <code>{user_id}</code>\n"
+        f"🪙 Token: <code>{user_data['token']}</code>\n"
+        f"🔸 Service: {data['service']['name']}\n"
+        f"🔗 Link: {data['link']}\n"
+        f"🔢 Qty: {data['quantity']}\n"
+        f"💰 Price: ₹{data['total_price']:.2f}\n\n"
+        f"📣 Please confirm this order in panel."
+    )
+
+    await bot.send_message(GROUP_ID, order_msg)
+    await message.answer("✅ Order sent to admin for approval.\n⏳ Please wait...", reply_markup=ReplyKeyboardRemove())
     await state.clear()
 
-# Run
+# === MAIN
 async def main():
     await dp.start_polling(bot)
 
