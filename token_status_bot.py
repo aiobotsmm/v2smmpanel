@@ -23,7 +23,13 @@ API_URL = os.getenv("SMM_API_URL")
 API_KEY = os.getenv("SMM_API_KEY")
 
 # === Bot Init ===
-bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+from aiogram.client.default import DefaultBotProperties
+
+bot = Bot(
+    token=BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
+
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
