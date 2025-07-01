@@ -41,16 +41,7 @@ def initialize_database():
     status TEXT DEFAULT 'pending',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
-    );
-
-   '''CREATE TABLE IF NOT EXISTS complaint_tokens (
-        token TEXT PRIMARY KEY,
-        user_id INTEGER,
-        txn_id TEXT,
-        amount REAL,
-        status TEXT DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );'''
+    
 
     CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
