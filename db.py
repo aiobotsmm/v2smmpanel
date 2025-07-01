@@ -43,12 +43,12 @@ def initialize_database():
     );
 
     CREATE TABLE IF NOT EXISTS complaint_tokens (
-    token TEXT PRIMARY KEY,
-    user_id INTEGER,
-    txn_id TEXT,
-    amount REAL,
-    status TEXT DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        token TEXT PRIMARY KEY,
+        user_id INTEGER,
+        txn_id TEXT,
+        amount REAL,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS orders (
