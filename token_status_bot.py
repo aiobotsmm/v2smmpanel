@@ -1,245 +1,186 @@
-import os
-import sqlite3
-import logging
-from dotenv import load_dotenv
-from aiogram import Bot, Dispatcher, F, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+import asyncio
 import aiohttp
+import sqlite3
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import (
+    Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+)
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.filters import CommandStart
+from aiogram.enums import ParseMode
+from aiogram.utils.markdown import hbold
+from dotenv import load_dotenv
+import os
 
-# === Load ENV ===
 load_dotenv()
+
 BOT_TOKEN = "5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I"
 API_KEY = os.getenv("SMM_API_KEY")
 API_URL = os.getenv("SMM_API_URL")
-GROUP_ID = -1002897201960  # Hardcoded group
-ADMIN_IDS = list(map(int, os.getenv("ADMIN_IDS").split(",")))
+GROUP_ID = int(os.getenv("SUPPORT_GROUP_ID"))
 
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher(storage=MemoryStorage())
-conn = sqlite3.connect("db.sqlite3", check_same_thread=False)
-cur = conn.cursor()
 
-# === States ===
-class OrderStates(StatesGroup):
-    awaiting_token = State()
+class UserStates(StatesGroup):
+    entering_token = State()
     browsing_services = State()
     entering_link = State()
     entering_quantity = State()
     confirm_order = State()
 
-# === Start ===
-@dp.message(F.text == "/start")
-async def start_handler(message: types.Message, state: FSMContext):
-    await state.set_state(OrderStates.awaiting_token)
+# === Start Command ===
+@dp.message(CommandStart())
+async def start_handler(message: Message, state: FSMContext):
+    await message.answer("👋 Welcome! Please enter your token to continue.")
+    await state.set_state(UserStates.entering_token)
+
+# === Handle Token ===
+@dp.message(UserStates.entering_token)
+async def handle_token(message: Message, state: FSMContext):
+    token = message.text.strip()
+    await state.update_data(token=token, user_id=message.from_user.id)
     await message.answer(
-        "⚠️ <b>Sorry for the delay in payment approval.</b>\n\n"
-        "Please enter your <b>complaint token</b> to continue.",
-        parse_mode="HTML"
+        f"✅ Token verified!
+Use buttons below to continue.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💼 My Wallet", callback_data="wallet")],
+            [InlineKeyboardButton(text="🛒 New Order", callback_data="new_order")]
+        ])
     )
 
-# === Step 1: Enter Token ===
-@dp.message(OrderStates.awaiting_token)
-async def handle_token(message: types.Message, state: FSMContext):
-    token = message.text.strip()
-    cur.execute("SELECT user_id, amount, txn_id FROM complaint_tokens WHERE token = ?", (token,))
-    row = cur.fetchone()
-    if not row:
-        return await message.answer("\u274c Invalid or expired token. Please try again.")
-
-    user_id, amount, txn_id = row
-    await state.update_data(token=token, user_id=user_id, amount=amount, txn_id=txn_id)
-
-    await message.answer(
-    f"✅ Temporary Wallet: ₹{amount}\n🧾 TXN ID: <code>{txn_id}</code>\n\n"
-    "Choose an option below:",
-    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💼 My Wallet", callback_data="wallet")],
-        [InlineKeyboardButton(text="🛒 New Order", callback_data="new_order")]
-    ])
-)
-
-# === Wallet Info ===
 @dp.callback_query(F.data == "wallet")
-async def wallet_info(call: types.CallbackQuery, state: FSMContext):
+async def wallet_info(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    amount = data.get("amount")
-    await call.message.edit_text(f"💼 Your temporary wallet balance is ₹{amount}")
+    await call.message.answer(f"💼 Your wallet is active for Token: <code>{data['token']}</code>")
 
-
-
-
-# === Start Order Process ===
+# === Show Services with Pagination ===
 @dp.callback_query(F.data == "new_order")
-async def start_order(call: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    if not all(k in data for k in ("user_id", "token", "amount")):
-        return await call.message.answer("❌ Missing token session. Please /start again.")
-
-    await state.set_state(OrderStates.browsing_services)
+async def start_order(call: CallbackQuery, state: FSMContext):
+    await state.set_state(UserStates.browsing_services)
     await show_services(call.message, state, page=1)
 
-# === Show SMM Services with Pagination (Vertical List) ===
-async def show_services(message: types.Message, state: FSMContext, page: int):
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(API_URL, data={"key": API_KEY, "action": "services"}) as resp:
-                services = await resp.json()
-    except Exception as e:
-        return await message.answer(f"❌ Failed to load services.\n{str(e)}")
+async def show_services(message: Message, state: FSMContext, page: int):
+    async with aiohttp.ClientSession() as session:
+        async with session.post(API_URL, data={"key": API_KEY, "action": "services"}) as resp:
+            services = await resp.json()
 
-    if not services:
-        return await message.answer("❌ No services found from API.")
-
-    per_page = 8
+    per_page = 5
     total = len(services)
     start = (page - 1) * per_page
     end = start + per_page
     current_services = services[start:end]
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"{svc['name']}", callback_data=f"svcdesc_{svc['service']}")]
-        for svc in current_services
-    ])
+    data = await state.get_data()
+    await state.update_data(all_services=services, current_page=page)
+
+    for svc in current_services:
+        rate = round(float(svc['rate']) * 1.10, 2)
+        text = (
+            f"🔹 <b>{svc['name']}</b>\n"
+            f"💰 Price: ₹{rate}/1k\n"
+            f"📦 Min: {svc['min']} | Max: {svc['max']}\n"
+            f"📄 Type: {svc.get('type', 'N/A')}\n"
+            f"⚡ Speed: {svc.get('speed', 'N/A')}"
+        )
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="➕ Select", callback_data=f"svc_{svc['service']}")]
+        ])
+        await message.answer(text, reply_markup=markup)
 
     nav = []
     if page > 1:
         nav.append(InlineKeyboardButton(text="⬅️ Prev", callback_data=f"page_{page-1}"))
     if end < total:
         nav.append(InlineKeyboardButton(text="➡️ Next", callback_data=f"page_{page+1}"))
+
     if nav:
-        kb.inline_keyboard.append(nav)
+        await message.answer("📜 Navigate:", reply_markup=InlineKeyboardMarkup(inline_keyboard=[nav]))
 
-    await state.update_data(all_services=services, current_page=page)
-    await message.edit_text("📋 Select a service to view details:", reply_markup=kb)
-
-# === Pagination ===
 @dp.callback_query(F.data.startswith("page_"))
-async def paginate_services(call: types.CallbackQuery, state: FSMContext):
+async def paginate_services(call: CallbackQuery, state: FSMContext):
     page = int(call.data.split("_")[1])
     await show_services(call.message, state, page)
 
-# === Show Service Description Before Proceeding ===
-@dp.callback_query(F.data.startswith("svcdesc_"))
-async def show_service_description(call: types.CallbackQuery, state: FSMContext):
+@dp.callback_query(F.data.startswith("svc_"))
+async def service_selected(call: CallbackQuery, state: FSMContext):
     service_id = int(call.data.split("_")[1])
     data = await state.get_data()
-    all_services = data.get("all_services", [])
-
-    service = next((s for s in all_services if int(s['service']) == service_id), None)
+    all_services = data.get("all_services")
+    service = next((s for s in all_services if s['service'] == service_id), None)
     if not service:
         return await call.message.answer("❌ Service not found.")
 
-    desc = (
-        f"🛎️ <b>{service['name']}</b>\n"
-        f"💰 Rate: ₹{service['rate']}/1k\n"
-        f"📦 Min: {service['min']} | Max: {service['max']}\n"
-        f"🚀 Speed: {service.get('speed', 'N/A')}\n"
-        f"📜 Type: {service.get('type', 'N/A')}\n"
-        f"📝 Description: {service.get('description', 'No description')}\n"
-    )
-
     await state.update_data(service=service)
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➡️ Continue", callback_data=f"svc_{service_id}")],
-        [InlineKeyboardButton(text="🔙 Back", callback_data=f"page_{data.get('current_page', 1)}")]
-    ])
-    await call.message.edit_text(desc, reply_markup=kb)
+    await state.set_state(UserStates.entering_link)
+    await call.message.answer(f"🔗 Enter the link for <b>{service['name']}</b>:")
 
-# === Select Service After Description ===
-@dp.callback_query(F.data.startswith("svc_"))
-async def service_selected(call: types.CallbackQuery, state: FSMContext):
-    service_id = int(call.data.split("_")[1])
-    data = await state.get_data()
-    service = data.get("service")
-    if not service or int(service['service']) != service_id:
-        return await call.message.answer("❌ Service info mismatch. Please try again.")
-
-    await state.set_state(OrderStates.entering_link)
-    await call.message.answer(f"🔗 Please enter the link for <b>{service['name']}</b>")
-
-
-# === User Enters Link ===
-@dp.message(OrderStates.entering_link)
-async def handle_link(message: types.Message, state: FSMContext):
+@dp.message(UserStates.entering_link)
+async def handle_link(message: Message, state: FSMContext):
     await state.update_data(link=message.text.strip())
-    await state.set_state(OrderStates.entering_quantity)
-    await message.answer("🔢 Enter the quantity:")
+    await state.set_state(UserStates.entering_quantity)
+    await message.answer("📦 Enter the quantity:")
 
-# === User Enters Quantity ===
-@dp.message(OrderStates.entering_quantity)
-async def handle_quantity(message: types.Message, state: FSMContext):
-    try:
-        qty = int(message.text.strip())
-    except ValueError:
-        return await message.answer("❌ Invalid quantity. Please enter a number.")
-
+@dp.message(UserStates.entering_quantity)
+async def handle_quantity(message: Message, state: FSMContext):
+    qty = int(message.text.strip())
     data = await state.get_data()
     service = data['service']
-    total_price = (qty / 1000) * float(service['rate'])
-    await state.update_data(quantity=qty, total_price=total_price)
+    price = (qty / 1000) * float(service['rate']) * 1.10
+
+    await state.update_data(quantity=qty, total_price=price)
 
     desc = (
-        f"🧾 <b>Order Preview:</b>\n"
-        f"🛎️ Service: <b>{service['name']}</b>\n"
-        f"🔗 Link: <code>{data['link']}</code>\n"
-        f"🔢 Quantity: {qty}\n"
-        f"💰 Total Price: ₹{total_price:.2f}"
+        f"🧾 <b>Order Summary</b>\n\n"
+        f"🔹 Service: {service['name']}\n"
+        f"🔗 Link: {data['link']}\n"
+        f"📦 Quantity: {qty}\n"
+        f"💰 Total: ₹{price:.2f}"
     )
-
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Confirm Order", callback_data="confirm_order")],
-        [InlineKeyboardButton(text="❌ Cancel Order", callback_data="cancel_order")]
+        [InlineKeyboardButton(text="✅ Confirm", callback_data="confirm_order")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_order")]
     ])
-
-    await state.set_state(OrderStates.confirm_order)
+    await state.set_state(UserStates.confirm_order)
     await message.answer(desc, reply_markup=kb)
 
-# === Cancel Order ===
 @dp.callback_query(F.data == "cancel_order")
-async def cancel_order(call: types.CallbackQuery, state: FSMContext):
+async def cancel_order(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    await call.message.edit_text("❌ Your order has been cancelled.")
+    await call.message.answer("❌ Order cancelled.")
 
-# === Confirm Order and Notify Admin ===
 @dp.callback_query(F.data == "confirm_order")
-async def confirm_order(call: types.CallbackQuery, state: FSMContext):
+async def confirm_order(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    user_id = call.from_user.id
-    token = data.get("token", "unknown")
-    service = data["service"]
-    link = data["link"]
-    qty = data["quantity"]
-    total_price = data["total_price"]
-
-    order_text = (
-        f"📥 <b>New Token Order</b>\n\n"
-        f"👤 User ID: <code>{user_id}</code>\n"
-        f"🔑 Token: <code>{token}</code>\n"
-        f"🛎️ Service: {service['name']}\n"
-        f"🔗 Link: {link}\n"
-        f"🔢 Quantity: {qty}\n"
-        f"💰 Price: ₹{total_price:.2f}\n\n"
-        "✅ Please approve or reject this order."
+    msg = (
+        f"📥 <b>New Temp Order</b>\n\n"
+        f"👤 User ID: <code>{data['user_id']}</code>\n"
+        f"🔗 Token: <code>{data['token']}</code>\n"
+        f"🔹 Service: {data['service']['name']}\n"
+        f"🔗 Link: {data['link']}\n"
+        f"📦 Quantity: {data['quantity']}\n"
+        f"💰 Price: ₹{data['total_price']:.2f}"
     )
-
-    await bot.send_message(GROUP_ID, order_text)
-    await call.message.edit_text("✅ Order sent to admin.\n⏳ Waiting for confirmation...")
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Approve", callback_data="admin_approve"),
+            InlineKeyboardButton(text="❌ Deny", callback_data="admin_deny")
+        ]
+    ])
+    await bot.send_message(GROUP_ID, msg, reply_markup=markup)
+    await call.message.answer("✅ Order sent to admin for review.")
     await state.clear()
 
-
-
-# === Run Bot ===
-import asyncio
+# === Admin Handling Logic (Optional) ===
+@dp.callback_query(F.data.in_(["admin_approve", "admin_deny"]))
+async def admin_action(call: CallbackQuery):
+    action = "approved" if call.data == "admin_approve" else "denied"
+    await call.message.edit_text(call.message.text + f"\n\n✅ Order {action} by admin.")
 
 async def main():
     await dp.start_polling(bot)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(main())
-
