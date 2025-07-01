@@ -38,7 +38,7 @@ from asyncio import sleep
 async def auto_generate_tokens():
     while True:
         # ⏳ Check pending payments older than 60 min
-        sixty_minutes_ago = datetime.datetime.utcnow() - datetime.timedelta(minutes=01)
+        sixty_minutes_ago = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
         cur.execute("""
             SELECT user_id, txn_id, amount FROM payments
             WHERE status = 'pending' AND created_at <= ?
@@ -93,7 +93,7 @@ async def auto_generate_tokens():
             except Exception as e:
                 print(f"❌ Could not notify admin: {e}")
 
-        await sleep(01)  # Repeat every minute
+        await sleep(1)  # Repeat every minute
 #-------------------------------------------------
 # FastAPI for health check (Optional but useful for Azure/uptime monitors)
 app = FastAPI()
