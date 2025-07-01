@@ -34,12 +34,13 @@ def initialize_database():
     );
 
     CREATE TABLE IF NOT EXISTS payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        amount REAL,
-        txn_id TEXT UNIQUE,
-        status TEXT DEFAULT 'pending'
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    amount REAL,
+    txn_id TEXT UNIQUE,
+    status TEXT DEFAULT 'pending',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
     );
 
    '''CREATE TABLE IF NOT EXISTS complaint_tokens (
