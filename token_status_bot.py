@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 # === Load .env ===
 load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = "5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I"
 GROUP_ID = int(os.getenv("GROUP_ID"))
 API_URL = os.getenv("API_URL")
 API_KEY = os.getenv("API_KEY")
