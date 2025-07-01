@@ -49,7 +49,7 @@ async def handle_token(message: Message, state: FSMContext):
     await message.answer("🔑 Please enter your token to proceed:")
     await state.set_state(OrderStates.awaiting_token)
 
-@router.message(OrderStates.awaiting_token)
+@router.message(OrderStates.waiting_token)
 async def verify_token(message: Message, state: FSMContext):
     token = message.text.strip()
 
