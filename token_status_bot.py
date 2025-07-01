@@ -11,6 +11,7 @@ from aiogram.types import (
     Message, ReplyKeyboardMarkup, KeyboardButton,
     ReplyKeyboardRemove
 )
+from db import cur, conn, bot
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import Command
 from dotenv import load_dotenv
@@ -33,10 +34,6 @@ bot = Bot(
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
-
-# === DB Init ===
-conn = sqlite3.connect("yourdb.db")
-cur = conn.cursor()
 
 
 # === FSM ===
