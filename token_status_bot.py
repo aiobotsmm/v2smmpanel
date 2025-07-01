@@ -47,7 +47,8 @@ USER_DB = {}  # {user_id: {'token': xxx, 'amount': xxx, 'txn_id': xxx}}
 @router.message(Command("start"))
 async def handle_token(message: Message, state: FSMContext):
     await message.answer("🔑 Please enter your token to proceed:")
-    await state.set_state(OrderStates.awaiting_token)
+    await state.set_state(OrderStates.waiting_token)
+
 
 @router.message(OrderStates.waiting_token)
 async def verify_token(message: Message, state: FSMContext):
