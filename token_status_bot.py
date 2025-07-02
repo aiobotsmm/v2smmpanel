@@ -248,8 +248,6 @@ async def confirm_order(message: Message, state: FSMContext):
     data = await state.get_data()
     user_id = message.from_user.id
 
-
-    # Send to admin
     order_msg = (
         f"📥 <b>New Temp Order (Token)</b>\n\n"
         f"👤 User ID: <code>{user_id}</code>\n"
@@ -259,7 +257,6 @@ async def confirm_order(message: Message, state: FSMContext):
         f"🔢 Qty: {data['quantity']}\n"
         f"💰 Price: ₹{data['total_price']:.2f}\n\n"
         f"📣 Please confirm this order in panel."
-    
     )
 
     
