@@ -259,6 +259,13 @@ async def cancel_order(message: Message, state: FSMContext):
 async def confirm_order(message: Message, state: FSMContext):
     data = await state.get_data()
     user_id = message.from_user.id
+    # ✅ Notify the user immediately
+    await bot.send_message(
+        user_id,
+        "✅ Your order has been placed successfully!\n"
+        "⏳ Please wait while admin reviews it.\n"
+        "You’ll be notified once approved or denied."
+    )
 
     order_msg = (
         f"📥 <b>New Temp Order (Token)</b>\n\n"
