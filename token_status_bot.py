@@ -338,10 +338,8 @@ async def approve_order(callback: CallbackQuery):
     WHERE user_id = ? AND status = 'pending'
     """, (user_id,))
     row = cur.fetchone()
-
-if not row:
-    
-    return await callback.message.answer("❌ No pending token found for this user.")
+    if not row:
+        return await callback.message.answer("❌ No pending token found for this user.")
 
 
     token, amount, total_price = row
