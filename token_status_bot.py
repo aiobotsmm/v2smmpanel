@@ -315,8 +315,6 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 async def approve_order(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
         return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
-state = FSMContext(bot=bot, storage=dp.storage, chat_id=callback.message.chat.id, user_id=user_id)
-data = await state.get_data()
 
     # Extract user_id and token from callback_data
     parts = callback.data.split(":")
@@ -325,6 +323,9 @@ data = await state.get_data()
 
     user_id = int(parts[1])
     token = parts[2]
+    state = FSMContext(bot=bot, storage=dp.storage, chat_id=callback.message.chat.id, user_id=user_id)
+    data = await state.get_data()
+
 
     # Fetch token details safely
     cur.execute("""
