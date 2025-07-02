@@ -344,7 +344,7 @@ async def approve_order(callback: CallbackQuery):
         UPDATE complaint_tokens 
         SET total_price = ?, status = 'approved' 
         WHERE token = ?
-    """, (new_balance, token))
+    """, (total_price, token))
     conn.commit()
 
     # Notify user
