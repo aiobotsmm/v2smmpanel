@@ -320,7 +320,7 @@ async def approve_order(callback: CallbackQuery):
 
     token, service_name, link, quantity, price = row
 
-    # Get list of services again
+    # Get service list
     async with aiohttp.ClientSession() as session:
         async with session.post(API_URL, data={"key": API_KEY, "action": "services"}) as resp:
             services = await resp.json()
@@ -350,22 +350,33 @@ async def approve_order(callback: CallbackQuery):
 
     order_id = api_response["order"]
 
-    # Deduct balance
-    cur.execute("UPDATE complaint_tokens SET amount = amount - ? WHERE token = ?", (price, token))
+    # ✅ Deduct balance
+    cur.execute("SELECT amount FROM complaint_tokens WHERE token = ?", (token,))
+    token_row = cur.fetchone()
+    if not token_row:
+        return await callback.answer("❌ Token not found in wallet.")
+
+    current_balance = float(token_row[0])
+    new_balance = round(current_balance - price, 2)
+
+    cur.execute("UPDATE complaint_tokens SET amount = ?, used = 1 WHERE token = ?", (new_balance, token))
     conn.commit()
 
-    # Notify user
+    # ✅ Notify user
     await bot.send_message(
         user_id,
-        f"✅ Your order has been approved and placed!\n"
-        f"🆔 Order ID: <code>{order_id}</code>"
+        f"✅ Your order has been placed!\n"
+        f"🆔 Order ID: <code>{order_id}</code>\n"
+        f"💰 New Balance: ₹{new_balance:.2f}"
     )
 
+    # ✅ Update admin message
     await callback.message.edit_text(
-        f"✅ Approved and sent to SMM provider\n\n{callback.message.text}",
+        f"✅ Approved and sent to provider\n\n{callback.message.text}",
         parse_mode="HTML"
     )
-    await callback.answer("✅ Order approved and sent.")
+    await callback.answer("✅ Order approved and balance deducted.")
+
 
 
 # === Deny Order Callback ===
