@@ -354,7 +354,7 @@ async def approve_order(callback: CallbackQuery, state: FSMContext):
         await callback.answer("❌ Error occurred during processing.")
 
     # Notify user
-    await bot.send_message(user_id, "✅ Your temp order has been approved by the admin.\n💸 ₹{:.2f} has been deducted from your wallet.".format(price))
+    await bot.send_message(user_id, "✅ Your temp order has been approved by the admin.\n💸 ₹{:.2f} has been deducted from your wallet.".format(total_price))
     await callback.message.edit_text(f"✅ Approved by admin\n\n" + callback.message.text, parse_mode="HTML")
 
 
