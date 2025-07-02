@@ -308,6 +308,8 @@ from aiogram.types import CallbackQuery
 import aiohttp
 
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+state = FSMContext(bot=bot, storage=dp.storage, chat_id=callback.message.chat.id, user_id=user_id)
+data = await state.get_data()
 
 # === Approve Order Callback ===
 @router.callback_query(F.data.startswith("approve:"))
