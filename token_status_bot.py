@@ -78,10 +78,6 @@ async def handle_token(message: Message, state: FSMContext):
     await state.set_state(OrderStates.browsing_services)
 
 
-
-   ''' user_id, txn_id, amount = row
-    await state.update_data(token=token, user_id=user_id, txn_id=txn_id, amount=amount)'''
-
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="💼 My Wallet")],
