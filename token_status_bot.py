@@ -300,82 +300,62 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 
 # === Approve Order Callback ===
 @router.callback_query(F.data.startswith("approve:"))
-async def approve_order(callback: CallbackQuery):
+async def approve_order(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
     user_id = int(callback.data.split(":")[1])
 
     if callback.from_user.id != ADMIN_ID:
         return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
 
-    # Get order from DB
-    cur.execute("""
-        SELECT token, service_name, link, quantity, price
-        FROM temp_orders
-        WHERE user_id = ?
-        ORDER BY created_at DESC LIMIT 1
-    """, (user_id,))
+    token = data["token"]
+    price = data["total_price"]
+
+    # Fetch current balance
+    cur.execute("SELECT amount FROM complaint_tokens WHERE token = ?", (token,))
     row = cur.fetchone()
 
     if not row:
-        return await callback.answer("❌ No order found for this user.")
+        return await callback.answer("❌ Token not found.", show_alert=True)
 
-    token, service_name, link, quantity, price = row
+    current_balance = row[0]
 
-    # Get service list
-    async with aiohttp.ClientSession() as session:
-        async with session.post(API_URL, data={"key": API_KEY, "action": "services"}) as resp:
-            services = await resp.json()
+    # Check if user has enough balance (this should already be true if validated earlier)
+    if current_balance < price:
+        return await callback.answer("❌ Not enough balance.", show_alert=True)
 
-    matched_service = next((s for s in services if s["name"].lower() == service_name.lower()), None)
-    if not matched_service:
-        return await callback.answer("❌ Service not found in provider list.")
+    # Deduct balance
+    new_balance = round(current_balance - price, 2)
+    cur.execute("UPDATE complaint_tokens SET amount = ?, approved = 1 WHERE token = ?", (new_balance, token))
+    conn.commit()
+    
+import aiohttp
 
-    service_id = matched_service["service"]
-
-    # Send order to API
-    async with aiohttp.ClientSession() as session:
-        async with session.post(API_URL, data={
+# Send order to API provider
+async with aiohttp.ClientSession() as session:
+    try:
+        response = await session.post(API_URL, data={
             "key": API_KEY,
             "action": "add",
-            "service": service_id,
-            "link": link,
-            "quantity": quantity
-        }) as resp:
-            api_response = await resp.json()
+            "service": data['service']['service'],  # Replace 'service' key if different
+            "link": data['link'],
+            "quantity": data['quantity']
+        })
+        result = await response.json()
 
-    if "order" not in api_response:
-        return await callback.message.edit_text(
-            f"❌ Failed to place order:\n<code>{str(api_response)}</code>",
-            parse_mode="HTML"
-        )
+        if "order" in result:
+            order_id = result["order"]
+            await bot.send_message(user_id, f"📦 Your order has been placed to provider!\n🆔 Order ID: {order_id}")
+        else:
+            await bot.send_message(user_id, f"⚠️ Failed to place order:\n{result}")
+    except Exception as e:
+        await bot.send_message(user_id, f"❌ Error sending order to provider:\n<code>{e}</code>")
 
-    order_id = api_response["order"]
 
-    # ✅ Deduct balance
-    cur.execute("SELECT amount FROM complaint_tokens WHERE token = ?", (token,))
-    token_row = cur.fetchone()
-    if not token_row:
-        return await callback.answer("❌ Token not found in wallet.")
 
-    current_balance = float(token_row[0])
-    new_balance = round(current_balance - price, 2)
+    # Notify user
+    await bot.send_message(user_id, "✅ Your temp order has been approved by the admin.\n💸 ₹{:.2f} has been deducted from your wallet.".format(price))
+    await callback.message.edit_text(f"✅ Approved by admin\n\n" + callback.message.text, parse_mode="HTML")
 
-    cur.execute("UPDATE complaint_tokens SET amount = ?, used = 1 WHERE token = ?", (new_balance, token))
-    conn.commit()
-
-    # ✅ Notify user
-    await bot.send_message(
-        user_id,
-        f"✅ Your order has been placed!\n"
-        f"🆔 Order ID: <code>{order_id}</code>\n"
-        f"💰 New Balance: ₹{new_balance:.2f}"
-    )
-
-    # ✅ Update admin message
-    await callback.message.edit_text(
-        f"✅ Approved and sent to provider\n\n{callback.message.text}",
-        parse_mode="HTML"
-    )
-    await callback.answer("✅ Order approved and balance deducted.")
 
 
 
