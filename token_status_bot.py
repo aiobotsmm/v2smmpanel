@@ -301,50 +301,58 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 # === Approve Order Callback ===
 @router.callback_query(F.data.startswith("approve:"))
 async def approve_order(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
+    from aiogram.types import ReplyKeyboardRemove
+    import aiohttp
+
     user_id = int(callback.data.split(":")[1])
 
     if callback.from_user.id != ADMIN_ID:
         return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
 
-    token = data["token"]
-    price = data["total_price"]
+    data = await state.get_data()
 
-    # Fetch current balance
-    cur.execute("SELECT amount FROM complaint_tokens WHERE token = ?", (token,))
-    row = cur.fetchone()
-
-    if not row:
-        return await callback.answer("❌ Token not found.", show_alert=True)
-
-    current_balance = row[0]
-
-    # Check if user has enough balance (this should already be true if validated earlier)
-    if current_balance < price:
-        return await callback.answer("❌ Not enough balance.", show_alert=True)
-
-    # Deduct balance
-    new_balance = round(current_balance - price, 2)
-    cur.execute("UPDATE complaint_tokens SET amount = ?, approved = 1 WHERE token = ?", (new_balance, token))
-    conn.commit()
-    async with aiohttp.ClientSession() as session:
     try:
-        response = await session.post(API_URL, data={
-            "key": API_KEY,
-            "action": "add",
-            "service": data['service']['service'],  # Replace 'service' key if different
-            "link": data['link'],
-            "quantity": data['quantity']
-        })
-        result = await response.json()
+        # Get user wallet from DB
+        cur.execute("SELECT amount FROM complaint_tokens WHERE token = ?", (data['token'],))
+        row = cur.fetchone()
+        if not row:
+            return await callback.answer("❌ Token not found.")
+        balance = float(row[0])
 
+        total_price = float(data["total_price"])
+        if balance < total_price:
+            return await bot.send_message(user_id, "❌ Not enough balance for your order.")
+
+        # Deduct balance
+        new_balance = balance - total_price
+        cur.execute("UPDATE complaint_tokens SET amount = ? WHERE token = ?", (new_balance, data['token']))
+        conn.commit()
+
+        # Send order to SMM API
+        async with aiohttp.ClientSession() as session:
+            response = await session.post(API_URL, data={
+                "key": API_KEY,
+                "action": "add",
+                "service": data["service"]["service"],  # Make sure this is the correct field for service ID
+                "link": data["link"],
+                "quantity": data["quantity"]
+            })
+            result = await response.json()
+
+        # Process API response
         if "order" in result:
             order_id = result["order"]
-            await bot.send_message(user_id, f"📦 Your order has been placed to provider!\n🆔 Order ID: {order_id}")
+            await bot.send_message(user_id, f"✅ Your order was approved and sent to the provider.\n📦 Order ID: <code>{order_id}</code>", parse_mode="HTML")
         else:
-            await bot.send_message(user_id, f"⚠️ Failed to place order:\n{result}")
+            await bot.send_message(user_id, f"⚠️ Order approved but sending to API failed:\n<code>{result}</code>", parse_mode="HTML")
+
+        # Mark message as approved
+        await callback.message.edit_text("✅ Approved by admin\n\n" + callback.message.text)
+
     except Exception as e:
-        await bot.send_message(user_id, f"❌ Error sending order to provider:\n<code>{e}</code>")
+        await bot.send_message(user_id, f"❌ Error during approval:\n<code>{e}</code>", parse_mode="HTML")
+        await callback.answer("❌ Error occurred during processing.")
+
     # Notify user
     await bot.send_message(user_id, "✅ Your temp order has been approved by the admin.\n💸 ₹{:.2f} has been deducted from your wallet.".format(price))
     await callback.message.edit_text(f"✅ Approved by admin\n\n" + callback.message.text, parse_mode="HTML")
