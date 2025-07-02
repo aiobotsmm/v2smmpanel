@@ -57,8 +57,9 @@ async def start_handler(message: Message, state: FSMContext):
 @router.message(OrderStates.waiting_token)
 async def handle_token(message: Message, state: FSMContext):
     token = message.text.strip()
-    cur.execute("SELECT * FROM complaint_tokens WHERE token = ?", (token,))
+    cur.execute("SELECT user_id, txn_id, amount FROM complaint_tokens WHERE token = ?", (token,))
     row = cur.fetchone()
+
     if not row:
         return await message.answer("❌ Invalid or expired token.")
 
