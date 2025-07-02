@@ -274,8 +274,6 @@ async def confirm_order(message: Message, state: FSMContext):
 
 from aiogram.types import CallbackQuery
 
-# Optional: define ADMIN_ID to restrict actions
-ADMIN_ID = int(os.getenv("ADMIN_ID"))  # Add this in your .env if not already
 
 @router.callback_query(F.data.startswith("approve:"))
 async def approve_order(callback: CallbackQuery):
