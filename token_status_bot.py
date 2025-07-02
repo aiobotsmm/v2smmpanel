@@ -296,6 +296,9 @@ async def confirm_order(message: Message, state: FSMContext):
 from aiogram.types import CallbackQuery
 
 
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+
+# === Approve Order Callback ===
 @router.callback_query(F.data.startswith("approve:"))
 async def approve_order(callback: CallbackQuery):
     user_id = int(callback.data.split(":")[1])
@@ -303,19 +306,80 @@ async def approve_order(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
         return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
 
-    await bot.send_message(user_id, "✅ Your temp order has been approved by the admin.")
-    await callback.message.edit_text(f"✅ Approved by admin\n\n" + callback.message.text, parse_mode="HTML")
+    # Get order from DB
+    cur.execute("""
+        SELECT token, service_name, link, quantity, price
+        FROM temp_orders
+        WHERE user_id = ?
+        ORDER BY created_at DESC LIMIT 1
+    """, (user_id,))
+    row = cur.fetchone()
 
+    if not row:
+        return await callback.answer("❌ No order found for this user.")
+
+    token, service_name, link, quantity, price = row
+
+    # Get list of services again
+    async with aiohttp.ClientSession() as session:
+        async with session.post(API_URL, data={"key": API_KEY, "action": "services"}) as resp:
+            services = await resp.json()
+
+    matched_service = next((s for s in services if s["name"].lower() == service_name.lower()), None)
+    if not matched_service:
+        return await callback.answer("❌ Service not found in provider list.")
+
+    service_id = matched_service["service"]
+
+    # Send order to API
+    async with aiohttp.ClientSession() as session:
+        async with session.post(API_URL, data={
+            "key": API_KEY,
+            "action": "add",
+            "service": service_id,
+            "link": link,
+            "quantity": quantity
+        }) as resp:
+            api_response = await resp.json()
+
+    if "order" not in api_response:
+        return await callback.message.edit_text(
+            f"❌ Failed to place order:\n<code>{str(api_response)}</code>",
+            parse_mode="HTML"
+        )
+
+    order_id = api_response["order"]
+
+    # Deduct balance
+    cur.execute("UPDATE complaint_tokens SET amount = amount - ? WHERE token = ?", (price, token))
+    conn.commit()
+
+    # Notify user
+    await bot.send_message(
+        user_id,
+        f"✅ Your order has been approved and placed!\n"
+        f"🆔 Order ID: <code>{order_id}</code>"
+    )
+
+    await callback.message.edit_text(
+        f"✅ Approved and sent to SMM provider\n\n{callback.message.text}",
+        parse_mode="HTML"
+    )
+    await callback.answer("✅ Order approved and sent.")
+
+
+# === Deny Order Callback ===
 @router.callback_query(F.data.startswith("deny:"))
-async def deny_order(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
+async def deny_order(callback: CallbackQuery):
     user_id = int(callback.data.split(":")[1])
 
     if callback.from_user.id != ADMIN_ID:
         return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
 
-    await bot.send_message(user_id, "❌ Your temp order was denied by the admin.")
-    await callback.message.edit_text(f"❌ Denied by admin\n\n" + callback.message.text, parse_mode="HTML")
+    await bot.send_message(user_id, "❌ Your order was denied by the admin.")
+    await callback.message.edit_text("❌ Denied by admin\n\n" + callback.message.text, parse_mode="HTML")
+    await callback.answer("❌ Order denied.")
+
 
     
 
