@@ -56,13 +56,24 @@ async def start_handler(message: Message, state: FSMContext):
 # === Token Verification ===
 @router.message(OrderStates.waiting_token)
 async def handle_token(message: Message, state: FSMContext):
-    token = message.text.strip().upper()
+    token = message.text.strip()
+    cur.execute("SELECT * FROM complaint_tokens WHERE token = ?", (token,))
+    row = cur.fetchone()
+    if not row:
+        return await message.answer("❌ Invalid or expired token.")
 
-    cur.execute("SELECT user_id, txn_id, amount FROM complaint_tokens WHERE token = ?", (token,))
-    result = cur.fetchone()
+    user_id, txn_id, amount = row
 
-    if not result:
-        return await message.answer("❌ Invalid token. Please check again.")
+    # ✅ FIX: save token in FSM for later use
+    await state.update_data(token=token)
+
+    # You may already have this
+    await state.update_data(user_id=user_id, txn_id=txn_id, amount=amount)
+
+    # Then continue to next step
+    await message.answer("✅ Token accepted. Now choose your service...")
+    # set next state
+
 
     user_id, txn_id, amount = result
     await state.update_data(token=token, user_id=user_id, txn_id=txn_id, amount=amount)
