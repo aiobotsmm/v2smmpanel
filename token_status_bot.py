@@ -289,7 +289,10 @@ async def confirm_order(message: Message, state: FSMContext):
     ]
 ])
     await bot.send_message(GROUP_ID, order_msg, reply_markup=buttons)
-    
+    await state.update_data(total_price=calculated_price)
+    cur.execute("UPDATE complaint_tokens SET total_price = ? WHERE token = ?", (calculated_price, token))
+    conn.commit()
+
 
 
 from aiogram.types import CallbackQuery
@@ -305,25 +308,46 @@ async def approve_order(callback: CallbackQuery):
 
     user_id = int(callback.data.split(":")[1])
 
-    # Get token and order details from the complaint_tokens table
-    cur.execute("SELECT token, amount, total_price FROM complaint_tokens WHERE user_id = ? AND status = 'pending'", (user_id,))
+    # Fetch token details safely
+    cur.execute("""
+        SELECT token, amount, total_price 
+        FROM complaint_tokens 
+        WHERE user_id = ? AND status = 'pending'
+    """, (user_id,))
     row = cur.fetchone()
 
     if not row:
         return await callback.message.answer("❌ No pending token found for this user.")
 
     token, amount, total_price = row
-    new_balance = amount - total_price
 
-    # Update token status to approved and store new balance
-    cur.execute("UPDATE complaint_tokens SET amount = ?, status = 'approved' WHERE token = ?", (new_balance, token))
+    # Error handling if total_price is missing
+    if total_price is None:
+        return await callback.message.answer("❌ Cannot approve: total price not found.")
+
+    # Balance deduction
+    new_balance = amount - total_price
+    if new_balance < 0:
+        return await callback.message.answer("⚠️ Insufficient balance for this order.")
+
+    # Update DB: mark token approved, update balance
+    cur.execute("""
+        UPDATE complaint_tokens 
+        SET amount = ?, status = 'approved' 
+        WHERE token = ?
+    """, (new_balance, token))
     conn.commit()
 
+    # Notify user
     await bot.send_message(
         user_id,
-        f"✅ Your temp order has been approved by the admin.\n💸 ₹{total_price:.2f} has been deducted from your wallet."
+        f"✅ Your temp order has been approved by the admin.\n"
+        f"💸 ₹{total_price:.2f} has been deducted from your wallet."
     )
+
+    # Update admin message
     await callback.message.edit_text("✅ Order approved successfully.")
+
 
 
     # Deduct balance
