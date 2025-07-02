@@ -22,6 +22,7 @@ BOT_TOKEN = "5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I"
 GROUP_ID = int(os.getenv("GROUP_ID"))
 API_URL = os.getenv("SMM_API_URL")
 API_KEY = os.getenv("SMM_API_KEY")
+ADMIN_ID= 5274097505
 
 # === Bot Init ===
 from aiogram.client.default import DefaultBotProperties
