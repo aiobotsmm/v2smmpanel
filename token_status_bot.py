@@ -125,7 +125,7 @@ async def show_services(message: Message, state: FSMContext, page: int):
         except Exception as e:
             return await message.answer(f"⚠️ Failed to fetch services:\n<code>{e}</code>")
 
-    per_page = 5
+    per_page = 8
     total = len(services)
     start = (page - 1) * per_page
     end = start + per_page
@@ -260,9 +260,10 @@ async def confirm_order(message: Message, state: FSMContext):
     user_id = message.from_user.id
 
     # ✅ Calculate total price
-    price_per_1000 = data['service']['rate']  # assume rate is per 1000
-    quantity = data['quantity']
+    price_per_1000 = float(data['service']['rate'])  # convert string to floa
+    quantity = int(data['quantity'])                # also ensure quantity is int
     total_price = (price_per_1000 / 1000) * quantity
+
 
     # ✅ Update FSM state and database
     await state.update_data(total_price=total_price)
