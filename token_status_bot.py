@@ -258,7 +258,18 @@ async def cancel_order(message: Message, state: FSMContext):
 async def confirm_order(message: Message, state: FSMContext):
     data = await state.get_data()
     user_id = message.from_user.id
-    # ✅ Notify the user immediately
+
+    # ✅ Calculate total price
+    price_per_1000 = data['service']['rate']  # assume rate is per 1000
+    quantity = data['quantity']
+    total_price = (price_per_1000 / 1000) * quantity
+
+    # ✅ Update FSM state and database
+    await state.update_data(total_price=total_price)
+    cur.execute("UPDATE complaint_tokens SET total_price = ? WHERE token = ?", (total_price, data['token']))
+    conn.commit()
+
+    # ✅ Notify user
     await bot.send_message(
         user_id,
         "✅ Your order has been placed successfully!\n"
@@ -266,14 +277,15 @@ async def confirm_order(message: Message, state: FSMContext):
         "You’ll be notified once approved or denied."
     )
 
+    # ✅ Prepare admin message
     order_msg = (
         f"📥 <b>New Temp Order (Token)</b>\n\n"
         f"👤 User ID: <code>{user_id}</code>\n"
         f"🪙 Token: <code>{data['token']}</code>\n"
         f"🔸 Service: {data['service']['name']}\n"
         f"🔗 Link: {data['link']}\n"
-        f"🔢 Qty: {data['quantity']}\n"
-        f"💰 Price: ₹{data['total_price']:.2f}\n\n"
+        f"🔢 Qty: {quantity}\n"
+        f"💰 Price: ₹{total_price:.2f}\n\n"
         f"📣 Please confirm this order in panel."
     )
 
@@ -289,11 +301,7 @@ async def confirm_order(message: Message, state: FSMContext):
     ]
 ])
     await bot.send_message(GROUP_ID, order_msg, reply_markup=buttons)
-    await state.update_data(total_price=calculated_price)
-    cur.execute("UPDATE complaint_tokens SET total_price = ? WHERE token = ?", (calculated_price, token))
-    conn.commit()
-
-
+    
 
 from aiogram.types import CallbackQuery
 import aiohttp
