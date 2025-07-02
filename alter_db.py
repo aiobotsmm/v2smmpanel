@@ -1,8 +1,7 @@
 import sqlite3
 
 # Connect to your SQLite DB file
-conn = sqlite3.connect("database.db")  # replace with your DB file name if different
-cur = conn.cursor()
+from db import cur, conn, bot
 
 # Try to add the column
 try:
