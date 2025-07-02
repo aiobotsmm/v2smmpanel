@@ -301,8 +301,8 @@ async def confirm_order(message: Message, state: FSMContext):
 # Create Approve / Deny buttons
     buttons = InlineKeyboardMarkup(inline_keyboard=[
     [
-        InlineKeyboardButton(text="✅ Approve", callback_data=f"approve:{user_id}:{data['token']}"),
-        InlineKeyboardButton(text="❌ Deny", callback_data=f"deny:{user_id}:{data['token']}")
+        InlineKeyboardButton(text="✅ Approve", callback_data=f"approve:{user_id}"),
+        InlineKeyboardButton(text="❌ Deny", callback_data=f"deny:{user_id}")
     ]
 ])
     await bot.send_message(GROUP_ID, order_msg, reply_markup=buttons)
