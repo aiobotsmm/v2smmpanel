@@ -299,18 +299,32 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 
 # === Approve Order Callback ===
 @router.callback_query(F.data.startswith("approve:"))
-async def approve_order(callback: CallbackQuery, state: FSMContext):
+async def approve_order(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
         return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
 
     user_id = int(callback.data.split(":")[1])
 
-    # Get state data
-    data = await state.get_data()
-    token = data['token']
-    total_price = data['total_price']
-    amount = data['amount']
+    # Get token and order details from the complaint_tokens table
+    cur.execute("SELECT token, amount, total_price FROM complaint_tokens WHERE user_id = ? AND status = 'pending'", (user_id,))
+    row = cur.fetchone()
+
+    if not row:
+        return await callback.message.answer("❌ No pending token found for this user.")
+
+    token, amount, total_price = row
     new_balance = amount - total_price
+
+    # Update token status to approved and store new balance
+    cur.execute("UPDATE complaint_tokens SET amount = ?, status = 'approved' WHERE token = ?", (new_balance, token))
+    conn.commit()
+
+    await bot.send_message(
+        user_id,
+        f"✅ Your temp order has been approved by the admin.\n💸 ₹{total_price:.2f} has been deducted from your wallet."
+    )
+    await callback.message.edit_text("✅ Order approved successfully.")
+
 
     # Deduct balance
     cur.execute("UPDATE complaint_tokens SET amount = ? WHERE token = ?", (new_balance, token))
