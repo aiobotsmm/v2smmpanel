@@ -294,7 +294,7 @@ async def confirm_order(message: Message, state: FSMContext):
 
 
 from aiogram.types import CallbackQuery
-
+import aiohttp
 
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -327,11 +327,7 @@ async def approve_order(callback: CallbackQuery, state: FSMContext):
     new_balance = round(current_balance - price, 2)
     cur.execute("UPDATE complaint_tokens SET amount = ?, approved = 1 WHERE token = ?", (new_balance, token))
     conn.commit()
-    
-import aiohttp
-
-# Send order to API provider
-async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession() as session:
     try:
         response = await session.post(API_URL, data={
             "key": API_KEY,
@@ -349,9 +345,6 @@ async with aiohttp.ClientSession() as session:
             await bot.send_message(user_id, f"⚠️ Failed to place order:\n{result}")
     except Exception as e:
         await bot.send_message(user_id, f"❌ Error sending order to provider:\n<code>{e}</code>")
-
-
-
     # Notify user
     await bot.send_message(user_id, "✅ Your temp order has been approved by the admin.\n💸 ₹{:.2f} has been deducted from your wallet.".format(price))
     await callback.message.edit_text(f"✅ Approved by admin\n\n" + callback.message.text, parse_mode="HTML")
