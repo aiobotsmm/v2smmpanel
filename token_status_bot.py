@@ -258,7 +258,44 @@ async def confirm_order(message: Message, state: FSMContext):
         f"📣 Please confirm this order in panel."
     )
 
-    await bot.send_message(GROUP_ID, order_msg)
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+# Create Approve / Deny buttons
+buttons = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="✅ Approve", callback_data=f"approve:{user_id}"),
+        InlineKeyboardButton(text="❌ Deny", callback_data=f"deny:{user_id}")
+    ]
+])
+
+await bot.send_message(GROUP_ID, order_msg, reply_markup=buttons)
+
+from aiogram.types import CallbackQuery
+
+# Optional: define ADMIN_ID to restrict actions
+ADMIN_ID = int(os.getenv("ADMIN_ID"))  # Add this in your .env if not already
+
+@router.callback_query(F.data.startswith("approve:"))
+async def approve_order(callback: CallbackQuery):
+    user_id = int(callback.data.split(":")[1])
+
+    if callback.from_user.id != ADMIN_ID:
+        return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
+
+    await bot.send_message(user_id, "✅ Your temp order has been approved by the admin.")
+    await callback.message.edit_text(f"✅ Approved by admin\n\n" + callback.message.text, parse_mode="HTML")
+
+@router.callback_query(F.data.startswith("deny:"))
+async def deny_order(callback: CallbackQuery):
+    user_id = int(callback.data.split(":")[1])
+
+    if callback.from_user.id != ADMIN_ID:
+        return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
+
+    await bot.send_message(user_id, "❌ Your temp order was denied by the admin.")
+    await callback.message.edit_text(f"❌ Denied by admin\n\n" + callback.message.text, parse_mode="HTML")
+
+    
 
     # Save to DB
     cur.execute("""
