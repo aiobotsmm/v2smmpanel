@@ -321,8 +321,8 @@ async def approve_order(callback: CallbackQuery):
     cur.execute("""
         SELECT token, amount, total_price 
         FROM complaint_tokens 
-        WHERE user_id = ? AND status = 'pending'
-    """, (user_id,))
+        WHERE token = ? AND status = 'pending'
+    """, (token,))
     row = cur.fetchone()
 
     if not row:
@@ -344,7 +344,7 @@ async def approve_order(callback: CallbackQuery):
         UPDATE complaint_tokens 
         SET total_price = ?, status = 'approved' 
         WHERE token = ?
-    """, (total_price, token))
+    """, (new_balance, token))
     conn.commit()
 
     # Notify user
