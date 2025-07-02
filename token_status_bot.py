@@ -342,7 +342,7 @@ async def approve_order(callback: CallbackQuery):
     # Update DB: mark token approved, update balance
     cur.execute("""
         UPDATE complaint_tokens 
-        SET amount = ?, status = 'approved' 
+        SET total_price = ?, status = 'approved' 
         WHERE token = ?
     """, (new_balance, token))
     conn.commit()
