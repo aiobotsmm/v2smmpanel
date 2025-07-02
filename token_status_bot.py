@@ -246,6 +246,8 @@ async def cancel_order(message: Message, state: FSMContext):
 @router.message(F.text == "✅ Confirm Order")
 async def confirm_order(message: Message, state: FSMContext):
     data = await state.get_data()
+    user_id = message.from_user.id
+
 
     # Send to admin
     order_msg = (
