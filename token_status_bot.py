@@ -76,7 +76,7 @@ async def handle_token(message: Message, state: FSMContext):
     # set next state
 
 
-    user_id, txn_id, amount = result
+    user_id, txn_id, amount = row
     await state.update_data(token=token, user_id=user_id, txn_id=txn_id, amount=amount)
 
     keyboard = ReplyKeyboardMarkup(
