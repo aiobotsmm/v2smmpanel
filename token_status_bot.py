@@ -300,7 +300,8 @@ async def approve_order(callback: CallbackQuery):
     await callback.message.edit_text(f"✅ Approved by admin\n\n" + callback.message.text, parse_mode="HTML")
 
 @router.callback_query(F.data.startswith("deny:"))
-async def deny_order(callback: CallbackQuery):
+async def deny_order(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
     user_id = int(callback.data.split(":")[1])
 
     if callback.from_user.id != ADMIN_ID:
