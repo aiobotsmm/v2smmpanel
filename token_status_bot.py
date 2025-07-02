@@ -65,19 +65,22 @@ async def handle_token(message: Message, state: FSMContext):
 
     user_id, txn_id, amount = row
 
-    # ✅ FIX: save token in FSM for later use
-    await state.update_data(token=token)
+    # Save details in FSM state
+    await state.update_data(
+        token=token,
+        user_id=user_id,
+        txn_id=txn_id,
+        amount=amount
+    )
 
-    # You may already have this
-    await state.update_data(user_id=user_id, txn_id=txn_id, amount=amount)
-
-    # Then continue to next step
+    # Proceed to next step
     await message.answer("✅ Token accepted. Now choose your service...")
-    # set next state
+    await state.set_state(OrderStates.browsing_services)
 
 
-    user_id, txn_id, amount = row
-    await state.update_data(token=token, user_id=user_id, txn_id=txn_id, amount=amount)
+
+   ''' user_id, txn_id, amount = row
+    await state.update_data(token=token, user_id=user_id, txn_id=txn_id, amount=amount)'''
 
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
