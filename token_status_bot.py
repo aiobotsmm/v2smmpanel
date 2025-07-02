@@ -308,14 +308,15 @@ from aiogram.types import CallbackQuery
 import aiohttp
 
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-state = FSMContext(bot=bot, storage=dp.storage, chat_id=callback.message.chat.id, user_id=user_id)
-data = await state.get_data()
+
 
 # === Approve Order Callback ===
 @router.callback_query(F.data.startswith("approve:"))
 async def approve_order(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
         return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
+state = FSMContext(bot=bot, storage=dp.storage, chat_id=callback.message.chat.id, user_id=user_id)
+data = await state.get_data()
 
     # Extract user_id and token from callback_data
     parts = callback.data.split(":")
