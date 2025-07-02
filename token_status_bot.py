@@ -311,61 +311,61 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 
 
 # === Approve Order Callback ===
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
+
 @router.callback_query(F.data.startswith("approve:"))
 async def approve_order(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
         return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
 
-    # Extract user_id and token from callback_data
-    parts = callback.data.split(":")
-    if len(parts) < 3:
-        return await callback.message.edit_text("❌ Invalid callback data format.")
+    user_id = int(callback.data.split(":")[1])
 
-    user_id = int(parts[1])
-    token = parts[2]
-    state = FSMContext(bot=bot, storage=dp.storage, chat_id=callback.message.chat.id, user_id=user_id)
+    # Get FSMContext to access state data
+    key = StorageKey(bot_id=callback.bot.id, chat_id=user_id, user_id=user_id)
+    state = FSMContext(storage=dp.storage, key=key)
+
     data = await state.get_data()
+    token = data.get("token")
 
+    if not token:
+        return await callback.message.answer("❌ Error: Token not found in user session.")
 
-    # Fetch token details safely
+    # Fetch token details
     cur.execute("""
-        SELECT amount, total_price 
+        SELECT token, amount, total_price 
         FROM complaint_tokens 
         WHERE token = ? AND status = 'pending'
     """, (token,))
     row = cur.fetchone()
 
     if not row:
-        return await callback.message.edit_text("❌ No pending token found for this user/token.")
+        return await callback.message.answer("❌ No pending token found for this user.")
 
-    amount, total_price = row
+    token, amount, total_price = row
 
-    # Error handling if total_price is missing
     if total_price is None:
-        return await callback.message.edit_text("❌ Cannot approve: total price not found.")
+        return await callback.message.answer("❌ Cannot approve: total price not found.")
 
-    # Balance deduction
     new_balance = amount - total_price
     if new_balance < 0:
-        return await callback.message.edit_text("⚠️ Insufficient balance for this order.")
+        return await callback.message.answer("⚠️ Insufficient balance.")
 
-    # Update DB: mark token approved, update balance
+    # Approve token and deduct balance
     cur.execute("""
         UPDATE complaint_tokens 
-        SET total_price = ?, status = 'approved' 
+        SET amount = ?, status = 'approved' 
         WHERE token = ?
-    """, (total_price, token))
+    """, (new_balance, token))
     conn.commit()
 
-    # Notify user
     await bot.send_message(
         user_id,
-        f"✅ Your temp order has been approved by the admin.\n"
-        f"💸 ₹{total_price:.2f} has been deducted from your wallet."
+        f"✅ Your temp order has been approved by the admin.\n💸 ₹{total_price:.2f} has been deducted from your wallet."
     )
 
-    # Update admin message
     await callback.message.edit_text("✅ Order approved successfully.")
+
 
 
 
