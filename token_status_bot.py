@@ -301,63 +301,57 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 # === Approve Order Callback ===
 @router.callback_query(F.data.startswith("approve:"))
 async def approve_order(callback: CallbackQuery, state: FSMContext):
-    from aiogram.types import ReplyKeyboardRemove
-    import aiohttp
-
-    user_id = int(callback.data.split(":")[1])
-
     if callback.from_user.id != ADMIN_ID:
         return await callback.answer("⚠️ You're not authorized to do this.", show_alert=True)
 
+    user_id = int(callback.data.split(":")[1])
+
+    # Get state data
     data = await state.get_data()
+    token = data['token']
+    total_price = data['total_price']
+    amount = data['amount']
+    new_balance = amount - total_price
 
+    # Deduct balance
+    cur.execute("UPDATE complaint_tokens SET amount = ? WHERE token = ?", (new_balance, token))
+    conn.commit()
+
+    # Send order to API
     try:
-        # Get user wallet from DB
-        cur.execute("SELECT amount FROM complaint_tokens WHERE token = ?", (data['token'],))
-        row = cur.fetchone()
-        if not row:
-            return await callback.answer("❌ Token not found.")
-        balance = float(row[0])
-
-        total_price = float(data["total_price"])
-        if balance < total_price:
-            return await bot.send_message(user_id, "❌ Not enough balance for your order.")
-
-        # Deduct balance
-        new_balance = balance - total_price
-        cur.execute("UPDATE complaint_tokens SET amount = ? WHERE token = ?", (new_balance, data['token']))
-        conn.commit()
-
-        # Send order to SMM API
         async with aiohttp.ClientSession() as session:
-            response = await session.post(API_URL, data={
+            payload = {
                 "key": API_KEY,
                 "action": "add",
-                "service": data["service"]["service"],  # Make sure this is the correct field for service ID
-                "link": data["link"],
-                "quantity": data["quantity"]
-            })
-            result = await response.json()
-
-        # Process API response
-        if "order" in result:
-            order_id = result["order"]
-            await bot.send_message(user_id, f"✅ Your order was approved and sent to the provider.\n📦 Order ID: <code>{order_id}</code>", parse_mode="HTML")
-        else:
-            await bot.send_message(user_id, f"⚠️ Order approved but sending to API failed:\n<code>{result}</code>", parse_mode="HTML")
-
-        # Mark message as approved
-        await callback.message.edit_text("✅ Approved by admin\n\n" + callback.message.text)
-
+                "service": data['service']['id'],
+                "link": data['link'],
+                "quantity": data['quantity']
+            }
+            async with session.post(API_URL, data=payload) as resp:
+                api_result = await resp.json()
     except Exception as e:
-        await bot.send_message(user_id, f"❌ Error during approval:\n<code>{e}</code>", parse_mode="HTML")
-        await callback.answer("❌ Error occurred during processing.")
+        return await callback.message.edit_text(f"❌ Failed to send order to API:\n<code>{e}</code>", parse_mode="HTML")
 
     # Notify user
-    await bot.send_message(user_id, "✅ Your temp order has been approved by the admin.\n💸 ₹{:.2f} has been deducted from your wallet.".format(total_price))
+    await bot.send_message(
+        user_id,
+        f"✅ Your temp order has been approved by the admin.\n"
+        f"💸 ₹{total_price:.2f} has been deducted from your wallet.\n"
+        f"📦 Order ID: {api_result.get('order', 'N/A')}"
+    )
+
+    # Save to temp_orders table
+    cur.execute("""
+        INSERT INTO temp_orders (token, user_id, service_name, link, quantity, price, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    """, (
+        token, user_id, data['service']['name'],
+        data['link'], data['quantity'], total_price
+    ))
+    conn.commit()
+
+    # Edit admin message
     await callback.message.edit_text(f"✅ Approved by admin\n\n" + callback.message.text, parse_mode="HTML")
-
-
 
 
 # === Deny Order Callback ===
