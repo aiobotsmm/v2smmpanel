@@ -258,11 +258,15 @@ async def cancel_order(message: Message, state: FSMContext):
 async def confirm_order(message: Message, state: FSMContext):
     data = await state.get_data()
     user_id = message.from_user.id
-
+    token = data.get("token")
+    total_price = data.get("total_price")
+    
     # ✅ Calculate total price
     price_per_1000 = float(data['service']['rate'])  # convert string to floa
     quantity = int(data['quantity'])                # also ensure quantity is int
     total_price = (price_per_1000 / 1000) * quantity
+    if not token or total_price is None:
+        return await message.answer("❌ Cannot confirm order: token or total price missing.")
 
 
     # ✅ Update FSM state and database
