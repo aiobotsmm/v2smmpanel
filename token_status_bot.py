@@ -358,9 +358,9 @@ async def approve_order(callback: CallbackQuery):
     # Approve token and deduct balance
     cur.execute("""
         UPDATE complaint_tokens 
-        SET amount = ?, status = 'approved' 
+        SET total_amount = ?, status = 'approved' 
         WHERE token = ?
-    """, (new_balance, token))
+    """, (total_price, token))
     conn.commit()
 
     await bot.send_message(
