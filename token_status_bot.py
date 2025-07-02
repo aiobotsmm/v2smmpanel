@@ -258,23 +258,30 @@ async def cancel_order(message: Message, state: FSMContext):
 async def confirm_order(message: Message, state: FSMContext):
     data = await state.get_data()
     user_id = message.from_user.id
+
     token = data.get("token")
-    total_price = data.get("total_price")
-    
-    # ✅ Calculate total price
-    price_per_1000 = float(data['service']['rate'])  # convert string to floa
-    quantity = int(data['quantity'])                # also ensure quantity is int
-    total_price = (price_per_1000 / 1000) * quantity
-    if not token or total_price is None:
-        return await message.answer("❌ Cannot confirm order: token or total price missing.")
+    service = data.get("service")
+    quantity = data.get("quantity")
+    link = data.get("link")
 
+    # Validate required fields
+    if not all([token, service, quantity, link]):
+        return await message.answer("❌ Something is missing in your order. Please try again.")
 
-    # ✅ Update FSM state and database
+    # Calculate total price
+    try:
+        price_per_1000 = float(service['rate'])  # Ensure rate is a float
+        quantity = int(quantity)  # Ensure quantity is int
+        total_price = round((price_per_1000 / 1000) * quantity, 2)
+    except Exception as e:
+        return await message.answer(f"❌ Failed to calculate total price.\nError: {e}")
+
+    # Save total_price in FSM and DB
     await state.update_data(total_price=total_price)
-    cur.execute("UPDATE complaint_tokens SET total_price = ? WHERE token = ?", (total_price, data['token']))
+    cur.execute("UPDATE complaint_tokens SET total_price = ? WHERE token = ?", (total_price, token))
     conn.commit()
 
-    # ✅ Notify user
+    # Notify user
     await bot.send_message(
         user_id,
         "✅ Your order has been placed successfully!\n"
@@ -282,30 +289,28 @@ async def confirm_order(message: Message, state: FSMContext):
         "You’ll be notified once approved or denied."
     )
 
-    # ✅ Prepare admin message
+    # Admin message
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    buttons = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Approve", callback_data=f"approve:{user_id}:{token}"),
+            InlineKeyboardButton(text="❌ Deny", callback_data=f"deny:{user_id}:{token}")
+        ]
+    ])
+
     order_msg = (
         f"📥 <b>New Temp Order (Token)</b>\n\n"
         f"👤 User ID: <code>{user_id}</code>\n"
-        f"🪙 Token: <code>{data['token']}</code>\n"
-        f"🔸 Service: {data['service']['name']}\n"
-        f"🔗 Link: {data['link']}\n"
+        f"🪙 Token: <code>{token}</code>\n"
+        f"🔸 Service: {service['name']}\n"
+        f"🔗 Link: {link}\n"
         f"🔢 Qty: {quantity}\n"
         f"💰 Price: ₹{total_price:.2f}\n\n"
         f"📣 Please confirm this order in panel."
     )
 
-    
-
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-# Create Approve / Deny buttons
-    buttons = InlineKeyboardMarkup(inline_keyboard=[
-    [
-        InlineKeyboardButton(text="✅ Approve", callback_data=f"approve:{user_id}"),
-        InlineKeyboardButton(text="❌ Deny", callback_data=f"deny:{user_id}")
-    ]
-])
     await bot.send_message(GROUP_ID, order_msg, reply_markup=buttons)
+
     
 
 from aiogram.types import CallbackQuery
