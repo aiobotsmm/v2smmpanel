@@ -33,6 +33,8 @@ from admin_contact import contact_router
 #---auto token---#
 import secrets
 import datetime
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from asyncio import sleep
 from asyncio import sleep
 # Group ID where admin notifications go
 GROUP_ID = -1002897201960  # Replace with your actual group ID
@@ -64,54 +66,53 @@ async def auto_generate_tokens():
                 VALUES (?, ?, ?, ?)
             """, (token, user_id, txn_id, amount))
             conn.commit()
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🚀 Use Token in Support Bot", 
+                                      url="https://t.me/smmtokendesk_bot"
+                                    )]
+            ])
+            try:
+                await bot.send_message(
+                    chat_id=user_id,
+                     text=(
+                         "⚠️ <b>Payment Timeout</b>\n\n"
+                         f"🔐 <b>Token:</b> <code>{token}</code>\n"
+                         f"💸 <b>Amount:</b> ₹{amount}\n"
             
-
-
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from asyncio import sleep
-
-# Create inline button markup
-keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="🚀 Use Token in Support Bot", url="https://t.me/smmtokendesk_bot")]
-])
-
-# === Notify user ===
-try:
-
-    await bot.send_message(
-        chat_id=user_id,
-        text=(
-            "⚠️ <b>Payment Timeout</b>\n\n"
-            f"🔐 <b>Token:</b> <code>{token}</code>\n"
-            f"💸 <b>Amount:</b> ₹{amount}\n"
-            f"📄 <b>Txn ID:</b> <code>{txn_id}</code>\n\n"
-            "❗ Your payment was not approved in time.\n"
-            "You can still use this token in our <b>Token Support Bot</b>."
-        ),
-        parse_mode="HTML",
-        reply_markup=keyboard
-    )
-except Exception as e:
-    print(f"❌ Could not notify user {user_id}: {e}")
-
-# === Notify admin/group ===
-try:
-    await bot.send_message(
-        GROUP_ID,  # Or ADMIN_ID
-        text=(
-            f"📌 <b>Token generated due to delay</b>\n\n"
-            f"👤 <b>User ID:</b> <code>{user_id}</code>\n"
-            f"💰 <b>Amount:</b> ₹{amount}\n"
-            f"🧾 <b>Txn ID:</b> <code>{txn_id}</code>\n"
-            f"🔐 <b>Token:</b> <code>{token}</code>"
-        ),
-        parse_mode="HTML"
-    )
-except Exception as e:
-    print(f"❌ Could not notify admin: {e}")
-    await sleep(1)
+                         f"📄 <b>Txn ID:</b> <code>{txn_id}</code>\n\n"
+            
+                         "❗ Your payment was not approved in time.\n"
+            
+                         "You can still use this token in our <b>Token Support Bot</b>."
+                     ),
+                    parse_mode="HTML",
+                    reply_markup=keyboard
+                )
+            except Exception as e:
+                print(f"❌ Could not notify user {user_id}: {e}")
 
         
+            try:
+                await bot.send_message(
+                    GROUP_ID,  # Or ADMIN_ID
+                    text=(
+                        f"📌 <b>Token generated due to delay</b>\n\n"
+            
+                        f"👤 <b>User ID:</b> <code>{user_id}</code>\n"
+            
+                        f"💰 <b>Amount:</b> ₹{amount}\n"
+            
+                        f"🧾 <b>Txn ID:</b> <code>{txn_id}</code>\n"
+            
+                        f"🔐 <b>Token:</b> <code>{token}</code>"
+                    ),
+                    parse_mode="HTML"
+
+                )
+            except Exception as e:
+                print(f"❌ Could not notify admin: {e}")
+                await sleep(1)
+                     
 #-------------------------------------------------
 # FastAPI for health check (Optional but useful for Azure/uptime monitors)
 app = FastAPI()
