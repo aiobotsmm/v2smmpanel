@@ -527,7 +527,7 @@ async def expire_token_cmd(message: Message):
     await message.answer(f"✅ Token <code>{token}</code> is now expired and user has been notified.")
 
 except Exception as e:
-    await message.answer(f"❌ Error: {e}")
+        await message.answer(f"❌ Error: {e}")
 
 # === MAIN ENTRY ===
 async def main():
