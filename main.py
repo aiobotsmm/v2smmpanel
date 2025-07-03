@@ -99,9 +99,7 @@ try:
 except Exception as e:
     print(f"❌ Could not notify user {user_id}: {e}")
 
-
-
-            # Notify admin/group (optional)
+# Notify admin/group (optional)
             try:
                 await bot.send_message(
                     GROUP_ID,  # Or use ADMIN_ID
@@ -118,6 +116,8 @@ except Exception as e:
                 print(f"❌ Could not notify admin: {e}")
 
         await sleep(1)  # Repeat every minute
+
+        
 #-------------------------------------------------
 # FastAPI for health check (Optional but useful for Azure/uptime monitors)
 app = FastAPI()
