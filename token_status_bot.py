@@ -28,6 +28,7 @@ API_URL = os.getenv("SMM_API_URL")
 API_KEY = os.getenv("SMM_API_KEY")
 ADMIN_ID = 5274097505
 
+
 # === Bot Init ===
 from aiogram.client.default import DefaultBotProperties
 
