@@ -454,6 +454,74 @@ async def debug_api(message: Message):
     except Exception as e:
         await message.answer(f"⚠️ Error contacting API:\n<code>{e}</code>", parse_mode="HTML")
 
+#----------------user orders -----------------#
+@router.message(Command("userorders"))
+async def check_token_orders(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return await message.answer("⚠️ You're not authorized to use this command.")
+
+    try:
+        parts = message.text.strip().split()
+        if len(parts) != 2:
+            return await message.answer("❌ Usage: /userorders <token>")
+
+        token = parts[1]
+
+        cur.execute("SELECT user_id, amount, total_price FROM complaint_tokens WHERE token = ?", (token,))
+        row = cur.fetchone()
+
+        if not row:
+            return await message.answer("❌ No data found for this token.")
+
+        user_id, amount, total = row
+        remaining = round(amount - (total or 0), 2)
+
+        cur.execute("SELECT COUNT(*) FROM temp_orders WHERE token = ?", (token,))
+        order_count = cur.fetchone()[0]
+
+        msg = (
+            f"📊 <b>Token Order Summary</b>\n\n"
+            f"🪙 Token: <code>{token}</code>\n"
+            f"👤 User ID: <code>{user_id}</code>\n"
+            f"💸 Used: ₹{total or 0:.2f}\n"
+            f"💼 Remaining: ₹{remaining:.2f}\n"
+            f"📦 Orders Placed: {order_count}"
+        )
+        await message.answer(msg)
+
+    except Exception as e:
+        await message.answer(f"⚠️ Error: {e}")
+
+#-----------------expiry token------------------#
+@router.message(Command("expiretoken"))
+async def expire_token_by_admin(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return await message.answer("⚠️ You're not authorized to use this command.")
+
+    try:
+        parts = message.text.strip().split()
+        if len(parts) != 2:
+            return await message.answer("❌ Usage: /expiretoken <token>")
+
+        token = parts[1]
+
+        cur.execute("SELECT user_id FROM complaint_tokens WHERE token = ? AND status = 'pending'", (token,))
+        row = cur.fetchone()
+
+        if not row:
+            return await message.answer("❌ No pending token found with this token ID.")
+
+        user_id = row[0]
+
+        cur.execute("UPDATE complaint_tokens SET status = 'expired' WHERE token = ?", (token,))
+        conn.commit()
+
+        await bot.send_message(user_id, "🕓 Your token has been expired by the admin.\n✅ Your complaint is considered resolved. You can generate a new one if needed.")
+        await message.answer(f"✅ Token <code>{token}</code> has been expired and user notified.")
+
+    except Exception as e:
+        await message.answer(f"❌ Error: {e}")
+
 # === MAIN ENTRY ===
 async def main():
     await dp.start_polling(bot)
