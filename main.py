@@ -113,12 +113,10 @@ try:
             f"🔐 Token: <code>{token}</code>"
             ),
         parse_mode="HTML"
-        )
-    except Exception as e:
-        print(f"❌ Could not notify admin: {e}")
-    
-
-        await sleep(1)
+    )
+except Exception as e:
+    print(f"❌ Could not notify admin: {e}")
+    await sleep(1)
                   # Repeat every minute
         
 #-------------------------------------------------
