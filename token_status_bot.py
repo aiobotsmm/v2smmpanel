@@ -337,7 +337,7 @@ async def approve_order(callback: CallbackQuery):
         return await callback.message.answer("❌ Missing order data in user session.")
 
     # Double-check token in DB
-    cur.execute("SELECT amount, total_price FROM complaint_tokens WHERE token = ? AND status = 'pending'", (token,))
+    cur.execute("SELECT amount, total_price FROM complaint_tokens WHERE token = ?", (token,))
     row = cur.fetchone()
     if not row:
         return await callback.message.answer("❌ No pending token found in DB.")
@@ -352,12 +352,9 @@ async def approve_order(callback: CallbackQuery):
     new_balance = amount - total_price
 
     # === 1. Update DB: mark approved and deduct balance
-    cur.execute("""
-        UPDATE complaint_tokens 
-        SET status = 'approved', amount = ?
-        WHERE token = ?
-    """, (new_balance, token))
+    cur.execute("UPDATE complaint_tokens SET amount = ?, status = 'approved' WHERE token = ?", (new_balance, token))
     conn.commit()
+
 
     # === 2. Send to SMM API
     try:
