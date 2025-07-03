@@ -24,7 +24,7 @@ from db import cur, conn
 from dotenv import load_dotenv
 load_dotenv()
 BOT_TOKEN = "8039876698:AAEtAYDvKuDBf_ooenBFRspGTnowQ4xJGLE"
-GROUP_ID = -4831955758
+GROUP_ID = "-4831955758"
 API_URL = os.getenv("SMM_API_URL")
 API_KEY = os.getenv("SMM_API_KEY")
 ADMIN_ID = "5274097505"
