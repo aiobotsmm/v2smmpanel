@@ -99,24 +99,27 @@ try:
 except Exception as e:
     print(f"❌ Could not notify user {user_id}: {e}")
 
+
 # Notify admin/group (optional)
-            try:
-                await bot.send_message(
-                    GROUP_ID,  # Or use ADMIN_ID
-                    text=(
-                        f"📌 Token generated due to delay.\n\n"
-                        f"👤 User ID: <code>{user_id}</code>\n"
-                        f"💰 Amount: ₹{amount}\n"
-                        f"🧾 Txn ID: <code>{txn_id}</code>\n"
-                        f"🔐 Token: <code>{token}</code>"
-                    ),
-                    parse_mode="HTML"
-                )
-            except Exception as e:
-                print(f"❌ Could not notify admin: {e}")
 
-        await sleep(1)  # Repeat every minute
+try:
+    await bot.send_message(
+        GROUP_ID,# Or use ADMIN_ID
+        text=(
+            f"📌 Token generated due to delay.\n\n"
+            f"👤 User ID: <code>{user_id}</code>\n"
+            f"💰 Amount: ₹{amount}\n"
+            f"🧾 Txn ID: <code>{txn_id}</code>\n"
+            f"🔐 Token: <code>{token}</code>"
+            ),
+        parse_mode="HTML"
+        )
+    except Exception as e:
+        print(f"❌ Could not notify admin: {e}")
+    
 
+        await sleep(1)
+                  # Repeat every minute
         
 #-------------------------------------------------
 # FastAPI for health check (Optional but useful for Azure/uptime monitors)
