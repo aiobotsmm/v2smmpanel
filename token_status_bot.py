@@ -22,8 +22,8 @@ from db import cur, conn
 
 # === Load .env ===
 load_dotenv()
-BOT_TOKEN = "5925186202:AAH64rf6SQqYSFw3pC-DrfEs0eOg-QLrU1I"
-GROUP_ID = int(os.getenv("GROUP_ID"))
+BOT_TOKEN = "8039876698:AAEtAYDvKuDBf_ooenBFRspGTnowQ4xJGLE"
+GROUP_ID = -4831955758
 API_URL = os.getenv("SMM_API_URL")
 API_KEY = os.getenv("SMM_API_KEY")
 ADMIN_ID = 5274097505
