@@ -66,20 +66,40 @@ async def auto_generate_tokens():
             conn.commit()
 
             # Notify user
-            try:
-                await bot.send_message(
-                    chat_id=user_id,
-                    text=(
-                        f"⚠️ Your payment has not been approved in time.\n\n"
-                        f"🔐 Complaint Token: <code>{token}</code>\n"
-                        f"💸 Amount: ₹{amount}\n"
-                        f"📄 Txn ID: {txn_id}\n\n"
-                        f"You can now use this token temporarily in our Token Support Bot."
-                    ),
-                    parse_mode="HTML"
-                )
-            except Exception as e:
-                print(f"❌ Could not notify user {user_id}: {e}")
+            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+# Inline button to open your token support bot
+keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="🚀 Use Token in Support Bot", url="https://t.me/smmtokendesk_bot")]
+])
+
+# Notify user
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+# Inline button to open your token support bot
+keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="🚀 Use Token in Support Bot", url="https://t.me/smmtokendesk_bot")]
+])
+
+# Notify user
+try:
+    await bot.send_message(
+        chat_id=user_id,
+        text=(
+            "⚠️ <b>Payment Timeout</b>\n\n"
+            f"🔐 <b>Token:</b> <code>{token}</code>\n"
+            f"💸 <b>Amount:</b> ₹{amount}\n"
+            f"📄 <b>Txn ID:</b> <code>{txn_id}</code>\n\n"
+            "❗ Your payment was not approved in time.\n"
+            "You can still use this token in our <b>Token Support Bot</b>."
+        ),
+        parse_mode="HTML",
+        reply_markup=keyboard
+    )
+except Exception as e:
+    print(f"❌ Could not notify user {user_id}: {e}")
+
+
 
             # Notify admin/group (optional)
             try:
