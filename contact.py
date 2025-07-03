@@ -10,7 +10,7 @@ from db import initialize_database
 # === Hardcoded Config ===
 CONTACT_BOT_TOKEN = "8178918373:AAGoV0MpOp-TaMbnS4YhyFJvK8yhOB44TQk"
 #ADMIN_IDS = [5274097505, 6364118939]
-SUPPORT_GROUP_ID = -1002897201960  # ← your group ID here
+SUPPORT_GROUP_ID = -4802238397  # ← your group ID here
 
 # === Init DB ===
 initialize_database()
