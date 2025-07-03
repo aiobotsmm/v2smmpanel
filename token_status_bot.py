@@ -362,7 +362,7 @@ async def approve_order(callback: CallbackQuery):
             payload = {
                 "key": API_KEY,
                 "action": "add",
-                "service": data['service']['id'],
+                "service": data['service'].get('id') or data['service'].get('service'),
                 "link": data['link'],
                 "quantity": data['quantity']
             }
