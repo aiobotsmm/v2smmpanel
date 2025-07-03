@@ -16,6 +16,7 @@ from aiogram.fsm.state import State, StatesGroup
 from dotenv import load_dotenv
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.types import CallbackQuery
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from db import cur, conn
 
