@@ -494,35 +494,38 @@ async def check_token_orders(message: Message):
 
 #-----------------expiry token------------------#
 @router.message(Command("expiretoken"))
-async def expire_token_by_admin(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return await message.answer("⚠️ You're not authorized to use this command.")
+async def expire_token_cmd(message: Message):
+    args = message.text.split()
+    if len(args) != 2:
+        return await message.answer("❌ Usage: /expiretoken <token_id>")
 
-    try:
-        parts = message.text.strip().split()
-        if len(parts) != 2:
-            return await message.answer("❌ Usage: /expiretoken <token>")
+    token = args[1].strip()
 
-        token = parts[1]
+    cur.execute("SELECT user_id, status FROM complaint_tokens WHERE token = ?", (token,))
+    row = cur.fetchone()
 
-        cur.execute("SELECT user_id, status FROM complaint_tokens WHERE token = ?", (token,))
-        row = cur.fetchone()
-        if not row:
-            return await message.answer("❌ No token found with this token ID.")
-        user_id, status = row
-        if status == "expired":
-            return await message.answer("⚠️ This token is already expired.")
-        if status == "approved":
-            return await message.answer("⚠️ This token is already approved.")
-        if status != "pending":
-            return await message.answer(f"⚠️ Token status is '{status}', not 'pending'. Expire anyway?")
-        cur.execute("UPDATE complaint_tokens SET status = 'expired' WHERE token = ?", (token,))
-        conn.commit()
-        await bot.send_message(
-            user_id,
-            "🕓 Your token has been expired by the admin.\n✅ Your complaint is considered resolved. You can generate a new one if needed."
-        )
-        await message.answer(f"✅ Token <code>{token}</code> has been expired and user notified.")
+    if not row:
+        return await message.answer("❌ No token found with this token ID.")
+
+    user_id, status = row
+
+    if status == "expired":
+        return await message.answer("⚠️ This token is already expired.")
+    
+    # Optional: Warn for approved tokens but still allow expiration
+    if status == "approved":
+        await message.answer("⚠️ This token was already approved. Proceeding to mark as expired...")
+
+    # Expire it
+    cur.execute("UPDATE complaint_tokens SET status = 'expired' WHERE token = ?", (token,))
+    conn.commit()
+
+    await bot.send_message(
+        user_id,
+        "🕓 Your token has been marked as expired by the admin.\n✅ Your complaint is considered resolved. You may now generate a new one if needed."
+    )
+    await message.answer(f"✅ Token <code>{token}</code> is now expired and user has been notified.")
+
 
     except Exception as e:
         await message.answer(f"❌ Error: {e}")
