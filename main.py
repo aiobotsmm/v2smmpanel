@@ -64,14 +64,9 @@ async def auto_generate_tokens():
                 VALUES (?, ?, ?, ?)
             """, (token, user_id, txn_id, amount))
             conn.commit()
+            
 
-# Notify user
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# Inline button to open your token support bot
-keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="🚀 Use Token in Support Bot", url="https://t.me/smmtokendesk_bot")]
-])
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from asyncio import sleep
 
