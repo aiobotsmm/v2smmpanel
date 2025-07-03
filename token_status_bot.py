@@ -505,18 +505,23 @@ async def expire_token_by_admin(message: Message):
 
         token = parts[1]
 
-        cur.execute("SELECT user_id FROM complaint_tokens WHERE token = ? AND status = 'pending'", (token,))
+        cur.execute("SELECT user_id, status FROM complaint_tokens WHERE token = ?", (token,))
         row = cur.fetchone()
-
         if not row:
-            return await message.answer("❌ No pending token found with this token ID.")
-
-        user_id = row[0]
-
+            return await message.answer("❌ No token found with this token ID.")
+        user_id, status = row
+        if status == "expired":
+            return await message.answer("⚠️ This token is already expired.")
+        if status == "approved":
+            return await message.answer("⚠️ This token is already approved.")
+        if status != "pending":
+            return await message.answer(f"⚠️ Token status is '{status}', not 'pending'. Expire anyway?")
         cur.execute("UPDATE complaint_tokens SET status = 'expired' WHERE token = ?", (token,))
         conn.commit()
-
-        await bot.send_message(user_id, "🕓 Your token has been expired by the admin.\n✅ Your complaint is considered resolved. You can generate a new one if needed.")
+        await bot.send_message(
+            user_id,
+            "🕓 Your token has been expired by the admin.\n✅ Your complaint is considered resolved. You can generate a new one if needed."
+        )
         await message.answer(f"✅ Token <code>{token}</code> has been expired and user notified.")
 
     except Exception as e:
