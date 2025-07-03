@@ -82,6 +82,7 @@ keyboard = InlineKeyboardMarkup(inline_keyboard=[
 
 # === Notify user ===
 try:
+
     await bot.send_message(
         chat_id=user_id,
         text=(
