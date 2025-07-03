@@ -209,16 +209,19 @@ async def ask_link(message: Message, state: FSMContext):
 
 
 # === Receive Link
+# === Receive Link (accepts @username or valid URL)
 @router.message(OrderStates.entering_link)
 async def receive_link(message: Message, state: FSMContext):
     link = message.text.strip()
 
-    if not (link.startswith("http://") or link.startswith("https://")):
-        return await message.answer("❌ Please enter a valid link starting with http:// or https://")
+    # ✅ Accept @username or valid URL
+    if not (link.startswith("@") or link.startswith("http://") or link.startswith("https://")):
+        return await message.answer("❌ Please enter a valid link or username (starting with @).")
 
     await state.update_data(link=link)
     await state.set_state(OrderStates.entering_quantity)
-    await message.answer("🔢 Enter the quantity you want to order:")
+    await message.answer("🔢 Enter the quantity you want:")
+
 
 
 # === Quantity
