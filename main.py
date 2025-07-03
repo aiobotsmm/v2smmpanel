@@ -65,14 +65,6 @@ async def auto_generate_tokens():
             """, (token, user_id, txn_id, amount))
             conn.commit()
 
-            # Notify user
-            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-# Inline button to open your token support bot
-keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="🚀 Use Token in Support Bot", url="https://t.me/smmtokendesk_bot")]
-])
-
 # Notify user
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -80,8 +72,15 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🚀 Use Token in Support Bot", url="https://t.me/smmtokendesk_bot")]
 ])
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from asyncio import sleep
 
-# Notify user
+# Create inline button markup
+keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="🚀 Use Token in Support Bot", url="https://t.me/smmtokendesk_bot")]
+])
+
+# === Notify user ===
 try:
     await bot.send_message(
         chat_id=user_id,
@@ -99,25 +98,23 @@ try:
 except Exception as e:
     print(f"❌ Could not notify user {user_id}: {e}")
 
-
-# Notify admin/group (optional)
-
+# === Notify admin/group ===
 try:
     await bot.send_message(
-        GROUP_ID,# Or use ADMIN_ID
+        GROUP_ID,  # Or ADMIN_ID
         text=(
-            f"📌 Token generated due to delay.\n\n"
-            f"👤 User ID: <code>{user_id}</code>\n"
-            f"💰 Amount: ₹{amount}\n"
-            f"🧾 Txn ID: <code>{txn_id}</code>\n"
-            f"🔐 Token: <code>{token}</code>"
-            ),
+            f"📌 <b>Token generated due to delay</b>\n\n"
+            f"👤 <b>User ID:</b> <code>{user_id}</code>\n"
+            f"💰 <b>Amount:</b> ₹{amount}\n"
+            f"🧾 <b>Txn ID:</b> <code>{txn_id}</code>\n"
+            f"🔐 <b>Token:</b> <code>{token}</code>"
+        ),
         parse_mode="HTML"
     )
 except Exception as e:
     print(f"❌ Could not notify admin: {e}")
     await sleep(1)
-                  # Repeat every minute
+
         
 #-------------------------------------------------
 # FastAPI for health check (Optional but useful for Azure/uptime monitors)
