@@ -38,7 +38,7 @@ from asyncio import sleep
 from asyncio import sleep
 # Group ID where admin notifications go
 GROUP_ID = -1002897201960  # Replace with your actual group ID
-API_TOKEN="8039876698:AAEtAYDvKuDBf_ooenBFRspGTnowQ4xJGLE"
+
 async def auto_generate_tokens():
     while True:
         # ⏳ Check pending payments older than 60 min
