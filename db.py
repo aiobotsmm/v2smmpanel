@@ -76,6 +76,7 @@ def initialize_database():
         txn_id TEXT UNIQUE,
         amount REAL,
         token TEXT UNIQUE,
+        total_price REAL,
         status TEXT DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
