@@ -68,7 +68,9 @@ async def handle_token(message: Message, state: FSMContext):
     if not row:
         return await message.answer("❌ Invalid or expired token. Please try again.")
 
-    user_id, txn_id, amount = row
+    user_id, txn_id, amount, status = row
+    if status in ("approved", "expired"):
+        return await message.answer("⚠️ This token is no longer active. It was already used or expired.")
 
     # Save token info in FSM
     await state.update_data(
