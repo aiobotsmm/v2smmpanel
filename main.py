@@ -12,7 +12,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 # Load .env variables
 load_dotenv()
-
+API_TOKEN=7542766614:AAHHD2bZZu4dMBsm55Nfq4T-y_IsJfeFTnY
 # Configs & DB
 from config import API_TOKEN
 from db import conn, cur, initialize_database
