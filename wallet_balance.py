@@ -104,7 +104,7 @@ async def process_amount(m: Message, state: FSMContext):
 async def ask_txnid(c: CallbackQuery, state: FSMContext):
     await c.message.answer("📥 Enter your UPI Transaction ID:")
     await c.answer()
-
+from datetime import datetime
 # --- Save TXN ID ---
 @router.message(AddBalance.txn_id)
 async def save_txnid(m: Message, state: FSMContext):
@@ -114,8 +114,8 @@ async def save_txnid(m: Message, state: FSMContext):
 
     try:
         cur.execute(
-            "INSERT INTO payments(user_id, amount, txn_id) VALUES (?, ?, ?)",
-            (m.from_user.id, amount, txn_id)
+            "INSERT INTO payments(user_id, amount, txn_id, status, created_at) VALUES (?, ?, ?, ?, ?)",
+            (m.from_user.id, amount, txn_id, 'pending', datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
         )
         conn.commit()
     except sqlite3.IntegrityError:
