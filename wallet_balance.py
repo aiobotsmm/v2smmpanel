@@ -138,10 +138,15 @@ async def save_txnid(m: Message, state: FSMContext):
         "You can then use it in our Support Bot to get help instantly.\n\n"
         "🤖 <i>Everything is handled automatically. You’ll be updated shortly!</i>",
         parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton("💬 Contact Support", url="https://t.me/sastasmmhelper_bot")]
-        ])
+        reply_markup=InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(
+                text="💬 Need help?",
+                url="https://t.me/sastasmmhelper_bot"
+            )]
+        ]
     )
+)
     await bot.send_message(
         GROUP_ID,
         f"🧾 *New Payment Request*\n"
