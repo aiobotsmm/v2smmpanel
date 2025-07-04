@@ -44,7 +44,7 @@ async def auto_generate_tokens():
     while True:
         try:
             # Time limit
-            cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=60)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=1)
 
             # Find old pending payments
             cur.execute("""
@@ -114,7 +114,7 @@ async def auto_generate_tokens():
         except Exception as e:
             print(f"🔁 Error in auto_generate_tokens: {e}")
 
-        await sleep(60)  # Repeat every 60 seconds
+        await sleep(1)  # Repeat every 60 seconds
 
 
 # FastAPI for health check (Optional but useful for Azure/uptime monitors)
