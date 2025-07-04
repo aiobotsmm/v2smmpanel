@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_TOKEN="7542766614:AAHHD2bZZu4dMBsm55Nfq4T-y_IsJfeFTnY"
+API_TOKEN= os.getenv("API_TOKEN"))
 GROUP_ID = int(os.getenv("GROUP_ID"))
 
 # ✅ Multi-admin support (comma-separated in .env)
