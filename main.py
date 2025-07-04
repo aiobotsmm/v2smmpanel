@@ -38,7 +38,7 @@ from asyncio import sleep
 from db import conn, cur  # Assuming your db.py has a connection and cursor
 from config import GROUP_ID, API_TOKEN
 
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=API_TOKEN)
 
 async def auto_generate_tokens():
     while True:
