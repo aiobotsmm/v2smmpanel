@@ -12,7 +12,7 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from config import SUPPORT_USERNAME
 from admin_contact import contact_router
 
-@contact_router.message(F.text == "📞 Contact Support")
+@contact_router.message(F.text == "📞 Contact Admin")
 async def contact_admin(m: Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
