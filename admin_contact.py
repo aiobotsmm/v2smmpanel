@@ -14,8 +14,13 @@ from config import SUPPORT_USERNAME
 
 @contact_router.message(F.text == "📞 Contact Admin")
 async def contact_admin(m: Message):
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton("💬 Chat with Support", url=f"https://t.me/{SUPPORT_USERNAME.lstrip('@')}")]
+   keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="💬 Chat with Support",
+                url=f"https://t.me/{SUPPORT_USERNAME.lstrip('@')}"
+            )
+        ]
     ])
     await m.answer(
         "📞 *Need help with something?*\n\n"
