@@ -14,7 +14,13 @@ async def view_orders(message: Message):
         ).fetchall()
 
         if not rows:
-            return await message.answer("❌ You haven't placed any orders yet.")
+            return await message.answer(
+                "📦 <b>No Orders Found</b>\n\n"
+                "😕 Looks like you haven’t placed any orders yet.\n"
+                "🚀 Start your journey by tapping on <b>New Order</b> and explore our services!",
+                parse_mode="HTML"
+            )
+
 
         orders = []
         for r in rows:
