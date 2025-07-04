@@ -130,7 +130,18 @@ async def save_txnid(m: Message, state: FSMContext):
         [InlineKeyboardButton(text="❌ Decline", callback_data=f"de_{m.from_user.id}_{amount}_{txn_id}")]
     ])
 
-    await m.answer("✅ Submitted for approval. You’ll be notified once processed.")
+    await m.answer(
+        "✅ <b>Payment Submitted!</b>\n\n"
+        "🚀 Your transaction is now being <b>automatically verified</b> by our system.\n"
+        "⏳ No manual action needed — just sit back and relax.\n\n"
+        "⏰ If your payment isn't approved within <b>60 minutes</b>, a unique <b>Support Token</b> will be generated for you.\n"
+        "You can then use it in our Support Bot to get help instantly.\n\n"
+        "🤖 <i>Everything is handled automatically. You’ll be updated shortly!</i>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton("💬 Contact Support", url="https://t.me/sastasmmhelper_bot")]
+        ])
+    )
     await bot.send_message(
         GROUP_ID,
         f"🧾 *New Payment Request*\n"
