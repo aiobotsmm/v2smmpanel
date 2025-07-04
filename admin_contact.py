@@ -12,7 +12,7 @@ from aiogram import F
 from aiogram.types import Message
 from config import SUPPORT_USERNAME
 
-@contact_router.message(F.text == "📞 Contact Support")
+@contact_router.message(F.text == "📞 Contact Admin")
 async def contact_admin(m: Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton("💬 Chat with Support", url=f"https://t.me/{SUPPORT_USERNAME.lstrip('@')}")]
