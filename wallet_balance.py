@@ -58,7 +58,14 @@ async def notify_group_payment(user_id: int, amount: float, reason: str = "Balan
 async def show_wallet(m: Message):
     user = cur.execute("SELECT balance FROM users WHERE user_id=?", (m.from_user.id,)).fetchone()
     bal = user[0] if user else 0.0
-    await m.answer(f"💵 Current Balance: ₹{bal:.2f}")
+    await m.answer(
+    f"🪙 <b>Wallet Status</b>\n\n"
+    f"💰 <b>₹{bal:.2f}</b> is waiting for you!\n"
+    f"🚀 Boost your presence, place an order now!\n\n"
+    f"➕ Need more balance? Tap on <b>Add Balance</b> to recharge.",
+    parse_mode="HTML"
+)
+
 
 # --- Prompt Amount to Add ---
 @router.message(F.text == "💰 Add Balance")
