@@ -29,6 +29,93 @@ from groupdata import group_router
 from admin_contact import contact_router
 #from admin import router as admin_router
 # from cancel import cancel_router  # Optional if you separate cancel handler
+import secrets
+from datetime import datetime, timedelta, timezone
+from aiogram import Bot
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from asyncio import sleep
+
+from db import conn, cur  # Assuming your db.py has a connection and cursor
+from config import GROUP_ID, BOT_TOKEN
+
+bot = Bot(token=BOT_TOKEN)
+
+async def auto_generate_tokens():
+    while True:
+        try:
+            # Time limit
+            cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=1)
+
+            # Find old pending payments
+            cur.execute("""
+                SELECT user_id, txn_id, amount FROM payments
+                WHERE status = 'pending' AND created_at <= ?
+            """, (cutoff_time,))
+            pending = cur.fetchall()
+
+            for user_id, txn_id, amount in pending:
+                # Skip if token already exists
+                cur.execute("SELECT 1 FROM complaint_tokens WHERE txn_id = ?", (txn_id,))
+                if cur.fetchone():
+                    continue
+
+                # Generate token
+                token = secrets.token_hex(4).upper()
+
+                # Save token
+                cur.execute("""
+                    INSERT INTO complaint_tokens (token, user_id, txn_id, amount)
+                    VALUES (?, ?, ?, ?)
+                """, (token, user_id, txn_id, amount))
+                conn.commit()
+
+                # Keyboard to use support bot
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(
+                        text="🚀 Use Token in Support Bot",
+                        url="https://t.me/smmtokendesk_bot"
+                    )]
+                ])
+
+                # Notify user
+                try:
+                    await bot.send_message(
+                        chat_id=user_id,
+                        text=(
+                            "⚠️ <b>Payment Timeout</b>\n\n"
+                            f"🔐 <b>Token:</b> <code>{token}</code>\n"
+                            f"💸 <b>Amount:</b> ₹{amount}\n"
+                            f"📄 <b>Txn ID:</b> <code>{txn_id}</code>\n\n"
+                            "❗ Your payment was not approved in time.\n"
+                            "You can still use this token in our <b>Token Support Bot</b>."
+                        ),
+                        parse_mode="HTML",
+                        reply_markup=keyboard
+                    )
+                except Exception as e:
+                    print(f"❌ Could not notify user {user_id}: {e}")
+
+                # Notify admin/group
+                try:
+                    await bot.send_message(
+                        chat_id=GROUP_ID,
+                        text=(
+                            f"📌 <b>Token generated due to delay</b>\n\n"
+                            f"👤 <b>User ID:</b> <code>{user_id}</code>\n"
+                            f"💰 <b>Amount:</b> ₹{amount}\n"
+                            f"🧾 <b>Txn ID:</b> <code>{txn_id}</code>\n"
+                            f"🔐 <b>Token:</b> <code>{token}</code>"
+                        ),
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    print(f"❌ Could not notify admin: {e}")
+
+        except Exception as e:
+            print(f"🔁 Error in auto_generate_tokens: {e}")
+
+        await sleep(1)  # Repeat every 60 seconds
+
 
 # FastAPI for health check (Optional but useful for Azure/uptime monitors)
 app = FastAPI()
@@ -63,6 +150,7 @@ def register_routers(dp: Dispatcher):
 async def main():
     # Start auto order updater loop
     asyncio.create_task(auto_update_orders())
+    asyncio.create_task(auto_generate_tokens())
 
     # Initialize DB and logging
     initialize_database()
