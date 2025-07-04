@@ -36,7 +36,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from asyncio import sleep
 
 from db import conn, cur  # Assuming your db.py has a connection and cursor
-from config import GROUP_ID, BOT_TOKEN
+from config import GROUP_ID, API_TOKEN
 
 bot = Bot(token=BOT_TOKEN)
 
