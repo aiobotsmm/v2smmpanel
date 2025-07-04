@@ -7,14 +7,14 @@ from db import bot
 
 contact_router = Router()
 
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram import F
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from config import SUPPORT_USERNAME
+from admin_contact import contact_router
 
-@contact_router.message(F.text == "📞 Contact Admin")
+@contact_router.message(F.text == "📞 Contact Support")
 async def contact_admin(m: Message):
-   keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
                 text="💬 Chat with Support",
@@ -22,6 +22,7 @@ async def contact_admin(m: Message):
             )
         ]
     ])
+
     await m.answer(
         "📞 *Need help with something?*\n\n"
         "👨‍💻 Tap the button below to connect with our friendly support team 👇",
