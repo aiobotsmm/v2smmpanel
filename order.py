@@ -156,7 +156,7 @@ async def confirm_order(message: Message, state: FSMContext):
         [InlineKeyboardButton(text="✅ Confirm Order", callback_data="confirm_order")],
         [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_order")]
     ])
-    await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
+    await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
 @router.callback_query(F.data == "confirm_order")
 async def place_final_order(callback: CallbackQuery, state: FSMContext):
