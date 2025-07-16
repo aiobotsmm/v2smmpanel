@@ -97,7 +97,7 @@ async def service_detail(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text="✅ Select", callback_data=f"select_{svc_id}")]
         ]
     )
-    await callback.message.answer(text, reply_markup=kb, parse_mode="Markdown")
+    await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("select_"))
